@@ -1,0 +1,14 @@
+	C-f	Sposta avanti di un carattere
+	C-b	Sposta indietro di un carattere
+
+	M-f	Sposta avanti di una parola
+	M-b	Sposta indietro di una parola
+
+	C-n	Sposta alla riga successiva
+	C-p	Sposta alla riga precedente
+
+	C-a	Sposta all'inizio della riga
+	C-e	Sposta alla fine della riga
+
+	M-a	Sposta all'inizio della frase
+	M-e	Sposta alla fine della frase
