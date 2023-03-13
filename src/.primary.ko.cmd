@@ -1,1 +1,0 @@
-cmd_/home/alessandrodea/Scrivania/SOAproject/src/primary.ko := ld -r -m elf_x86_64 -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T scripts/module.lds -o /home/alessandrodea/Scrivania/SOAproject/src/primary.ko /home/alessandrodea/Scrivania/SOAproject/src/primary.o /home/alessandrodea/Scrivania/SOAproject/src/primary.mod.o;  true

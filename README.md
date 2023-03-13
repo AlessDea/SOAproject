@@ -23,3 +23,40 @@ The device driver should support file system operations allowing the access to t
 The device should be accessible as a file in a file system supporting the above file operations. At the same time the device should be mounted on whichever directory of the file system to enable the operations by threads. For simplicity, it is assumed that the device driver can support a single mount at a time. When the device is not mounted, not only the above file operations should simply return with error, but also the VFS non-supported system calls introduced above should return with error (in particular with the ENODEV error).
 
 The maximum number of manageable blocks is a parameter NBLOCKS that can be configured at compile time. A block-device layout (its partition) can actually keep up to NBLOCKS blocks or less. If it keeps more than NBLOCKS blocks, the mount operation of the device should fail. The user level software to format the device for its usage should also be designed and implemented.
+
+
+
+### Idee
+Creazione:
+- tutta la logica a blocchi può essere semplicemente fatta su un char device
+- il char device però deve stare su un block device
+  - per avere ciò pero vuol dire che sul block device deve esserci un file system, altrimenti non posso mettercelo sopra
+- le operazioni a blocchi sul block device vengono fatte in automatico dal layer apposito, non devo preoccuparmene
+
+Syscall:
+- bisogna creare le syscall ed inserirle nella syscall table con il modulo del Prof
+- come fa la syscall a prendere le informazioni del device? devo far si che siano visibili ad esse.
+  - oppure faccio passare alle system call anche il file descriptor, forse è meglio
+
+
+Mappa del device: c'è bisogno di una mappa che tenga traccia dei blocchi validi e non. Inoltre c'è bisogno di mantenere l'ordine temporale dei messaggi:
+```C
+static struct device_map{
+    int validity; //1: holds valid data; 0: invalid data ==> reuse it!
+    size_t dirty_len;
+    int next_off;
+}map[NBLOCKS];
+```
+Poi la cambio e la faccio diventare una rcu list.
+
+
+## TODO
+- `next_valid()`: returns the offset of the first valid block. If there are not valid blocks returns -1
+  - used in umsg-char-dev.c
+- `first_free()`: returns the first free block in the device, return -1 if there is not a free one
+  - used in the put_data syscall
+- `new_blk()`: creates a block (metadata + data)
+  - used in put_data
+- `is_valid(int off)`: checks if the block at off is valid, if not return -1
+  - used in get_data
+- `get_msg_len()`: read from block's metadata how many bytes the data is formed by
