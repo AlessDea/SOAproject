@@ -8,15 +8,16 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
-#include "singlefilefs.h"
-
+#include "helper.h"
 
 
 static struct super_operations singlefilefs_super_ops = {
+        //not required
 };
 
 
 static struct dentry_operations singlefilefs_dentry_ops = {
+        //not required
 };
 
 
@@ -76,11 +77,14 @@ int singlefilefs_fill_super(struct super_block *sb, void *data, int silent) {
 
     sb->s_root->d_op = &singlefilefs_dentry_ops;//set our dentry operations
 
+    my_bdev_sb = sb;
+
     //unlock the inode to make it usable
     unlock_new_inode(root_inode);
 
     return 0;
 }
+
 
 static void singlefilefs_kill_superblock(struct super_block *s) {
     kill_block_super(s);
@@ -88,10 +92,12 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     return;
 }
 
+
 //called on file system mounting 
 struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, const char *dev_name, void *data) {
 
     struct dentry *ret;
+    int i;
 
     ret = mount_bdev(fs_type, flags, dev_name, data, singlefilefs_fill_super);
 
@@ -100,8 +106,22 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     else
         printk("%s: singlefilefs is succesfully mounted on from device %s\n",MOD_NAME,dev_name);
 
+
+    /* create the map of the device */
+    list_init(&dev_map);
+    // insert the head
+    element *rcu_head = kmalloc(sizeof(element), GFP_KERNEL);
+    rcu_head->validity = -1;
+    rcu_head->key = -1;
+    rcu_head->next = NULL;
+    dev_map.head = rcu_head;
+
+    // init the blocks --> NO. Insert a new block in the rcu list at every put_data
+    //for(i = 0; i < NBLOCKS; i++) list_insert(&dev_map, i);
+
     return ret;
 }
+
 
 //file system structure
 static struct file_system_type onefilefs_type = {
@@ -126,6 +146,7 @@ static int singlefilefs_init(void) {
     return ret;
 }
 
+
 static void singlefilefs_exit(void) {
 
     int ret;
@@ -138,6 +159,7 @@ static void singlefilefs_exit(void) {
     else
         printk("%s: failed to unregister singlefilefs driver - error %d", MOD_NAME, ret);
 }
+
 
 module_init(singlefilefs_init);
 module_exit(singlefilefs_exit);

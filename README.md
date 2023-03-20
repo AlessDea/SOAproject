@@ -28,35 +28,39 @@ The maximum number of manageable blocks is a parameter NBLOCKS that can be confi
 
 ### Idee
 Creazione:
-- tutta la logica a blocchi può essere semplicemente fatta su un char device
-- il char device però deve stare su un block device
-  - per avere ciò pero vuol dire che sul block device deve esserci un file system, altrimenti non posso mettercelo sopra
-- le operazioni a blocchi sul block device vengono fatte in automatico dal layer apposito, non devo preoccuparmene
-
+- uso il singlefilefs di quaglia. In pratica esso viene montato su un block device, quindi tutte le operazioni verranno fatte dal layer a blocchi in automatica, non c'è bisogno di fare altro.
+- bisogna solo creare quanti blocchi si necessitano e gestire la logica di lettura di essi.
 Syscall:
 - bisogna creare le syscall ed inserirle nella syscall table con il modulo del Prof
-- come fa la syscall a prendere le informazioni del device? devo far si che siano visibili ad esse.
-  - oppure faccio passare alle system call anche il file descriptor, forse è meglio
+- come fa la syscall a prendere le informazioni del device? devo far si che siano visibili ad esse
 
 
-Mappa del device: c'è bisogno di una mappa che tenga traccia dei blocchi validi e non. Inoltre c'è bisogno di mantenere l'ordine temporale dei messaggi:
-```C
-static struct device_map{
-    int validity; //1: holds valid data; 0: invalid data ==> reuse it!
-    size_t dirty_len;
-    int next_off;
-}map[NBLOCKS];
+Mappa del device: c'è bisogno di una mappa che tenga traccia dei blocchi validi e non. Inoltre c'è bisogno di mantenere l'ordine temporale dei messaggi:.
+Per mantenere l'ordine temporale devo eliminare dalla RCU i blocchi che vengono invalidati. In questo modo ogni volta che viene fatta una put_data viene creato un nuovo elemento nella RCU e inserito nell'ordine corretto.
+
+
+Per il `put_data` e `invalidate_data` bisogna far si che la modifica sul device venga fatta subito dopo che scade il grace period.Questo è garantito
+dal fatto che si rimuove dalla lista il blocco subito dopo lo scadere del grace period.
+
+
+#### N.B. 
+> I metadati nel blocco servono solo in caso di crash del modulo. Nel senso che servono come consistenza
+> per quelli che si trovano nella RCU list. Infatti i metadati vengono usati solo nella RCU list per verificare
+> le varie condizioni necessarie per le operazioni. Questi vengono sempre riportati all'interno del blocco 'fisico' 
+> ma non durettamente usati in esso.
+> 
+> Bisogna infatti implementare una fase di training in cui il modulo va a leggere i blocchi del device e ricostruisce
+la RCU list da quelle informazioni.
+
+La struttura è la seguente:
+
 ```
-Poi la cambio e la faccio diventare una rcu list.
+                                Block 2     Block 3      Block 4
+---------------------------------------------------------------------
+| Block 0    | Block 1      | File meta  |  File meta  | File meta  | 
+| Superblock | inode of the | ---------- | ----------- | ---------- | 
+|            | File         | File data  |  File data  | File data  |
+---------------------------------------------------------------------
 
+```
 
-## TODO
-- `next_valid()`: returns the offset of the first valid block. If there are not valid blocks returns -1
-  - used in umsg-char-dev.c
-- `first_free()`: returns the first free block in the device, return -1 if there is not a free one
-  - used in the put_data syscall
-- `new_blk()`: creates a block (metadata + data)
-  - used in put_data
-- `is_valid(int off)`: checks if the block at off is valid, if not return -1
-  - used in get_data
-- `get_msg_len()`: read from block's metadata how many bytes the data is formed by

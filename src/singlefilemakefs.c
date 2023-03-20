@@ -3,18 +3,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "singlefilefs.h"
 #include "helper.h"
 
 /*
 	This makefs will write the following information onto the disk
 	- BLOCK 0, superblock;
 	- BLOCK 1, inode of the unique file (the inode for root is volatile);
-	- BLOCK 2, ..., datablocks of the unique file 
+	- BLOCK 2, ..., datablocks of the unique file
+        ...
 */
 
 int main(int argc, char *argv[])
@@ -83,8 +82,10 @@ int main(int argc, char *argv[])
 	}
 	printf("Padding in the inode block written sucessfully.\n");
 
+
 	//write file datablock
-	nbytes = strlen(file_body);
+/*
+    nbytes = strlen(file_body);
 	ret = write(fd, file_body, nbytes);
 	if (ret != nbytes) {
 		printf("Writing file datablock has failed.\n");
@@ -92,6 +93,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	printf("File datablock has been written succesfully.\n");
+*/
 
 	close(fd);
 

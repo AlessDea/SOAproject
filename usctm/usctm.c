@@ -42,7 +42,8 @@
 #include <linux/syscalls.h>
 #include "./include/vtpmo.h"
 
-#include "../src/helper.h"
+#include "../src/singlefilefs.h"
+#include "../rcu_list/list.h"
 
 
 MODULE_LICENSE("GPL");
@@ -171,8 +172,9 @@ module_param_array(free_entries,int,NULL,0660);//default array size already know
     asmlinkage int sys_put_data(char * source, size_t size){
 #endif
 
-        int off;
-        char *buff;
+        int off, i;
+        struct block *blk;
+        struct buffer_head *bh;
 
         printk("%s: thread %d requests a put_data sys_call\n",MODNAME,current->pid);
 
@@ -188,22 +190,36 @@ module_param_array(free_entries,int,NULL,0660);//default array size already know
 
 
         /* check if there is a free block available */
-        off = first_free(); //TODO
+        off = list_first_free(&dev_map);
         if(off < 0)
             return -ENOMEM;
 
 
-        // TODO: file is unknown here, do something about it
-        struct my_device_data *my_data = (struct my_device_data *) file->private_data;
+        /* perform the write in bh */
 
-        /* TODO: new_blk(): create a block made of metadata and data (source) */
-        buff = new_blk();
+        blk = kzalloc(sizeof(struct block *), GFP_KERNEL);
 
-        // write the metadata and data in the new block (buff)
+        blk->metadata = VALID_MASK ^ size;
 
-        // update the device map
 
-        memcpy(my_data->data + off*BLOCK_SSIZE, buff, BLOCK_SSIZE);
+        memcpy(blk->data, source, size);
+
+        // get the buffer_head
+        bh = (struct buffer_head *)sb_bread(my_bdev_sb, off+2);
+        if(!bh){
+            return -EIO;
+        }
+
+        memcpy(bh->data, (char *)blk, BLOCK_SSIZE);
+
+        mark_buffer_dirty(bh);
+        brelse(bh);
+
+        /* the block in the list must be visible when the write in bh is done */
+        if(!list_insert(&dev_map, off))
+            return -ENOMEM;
+
+
 
         return off;
 }
@@ -214,25 +230,34 @@ module_param_array(free_entries,int,NULL,0660);//default array size already know
 #else
     asmlinkage int sys_get_data(int offset, char * destination, size_t size){
 #endif
-        //TODO
 
         int len;
+        struct buffer_head *bh;
+        struct block *blk;
+
 
         printk("%s: thread %d requests a get_data sys_call\n",MODNAME,current->pid);
 
         /* check if offset exists */
-        if(offset > NBLOCKS-1)
+        if(BLK_INDX(offset) > NBLOCKS-1)
             return -ENODATA;
 
-        if(is_valid(BLK_INDX(offset)) == -1)
+        if(rcu_list_is_valid(&dev_map, BLK_INDX(offset)) == 0)
             return -ENODATA;
 
-        // TODO: file is unknown here, do something about it
-        struct my_device_data *my_data = (struct my_device_data *) file->private_data;
+        // get the buffer_head
+        bh = (struct buffer_head *)sb_bread(my_bdev_sb, BLK_INDX(offset)+2);
+        if(!bh){
+            return -EIO;
+        }
 
-        len = get_msg_len();
+        blk = (struct block*)bh->b_data;
 
-        memcpy(destination, GET_BLK_DATA(my_data->data + BLK_INDX(offset)*BLOCK_SSIZE), (len > size) ? size : len);
+        len = MSG_LEN(blk->metadata);
+
+        memcpy(destination, blk->data, (len > size) ? size : len);
+
+        brelse(bh);
 
         return (len > size) ? size : len;
 
@@ -244,15 +269,35 @@ __SYSCALL_DEFINEx(1, _invalidate_data, int, offset){
 #else
 asmlinkage int sys_invalidate_data(int, offset){
 #endif
-    //TODO
+
+    int ret;
+    struct buffer_head *bh;
+    struct block *blk;
+
 
     printk("%s: thread %d requests a invalidate_data sys_call\n",MODNAME,current->pid);
 
+    // check if the block is already invalid
+    ret = list_is_valid(&dev_map, BLK_INDX(offset));
+    if(ret == 0)
+        return 0; //already invalid
+
     // update the device map setting invalid the block at offset
+    list_remove(&dev_map, BLK_INDX(offset));
+    // at this point the upcoming reads operations don't find the invalidated block in the list
 
     // update the metadata of that block
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, BLK_INDX(offset));
+    if(!bh){
+        return -EIO;
+    }
 
-    // clear the data field
+    blk = (struct block*)bh->b_data;
+    blk->metadata = INVALIDATE(blk->metadata);
+
+    make_buffer_dirty(bh);
+    brelse(bh);
+
 
     return 0;
 
@@ -324,21 +369,15 @@ int init_module(void) {
 	cr0 = read_cr0();
     unprotect_memory();
     hacked_syscall_tbl[FIRST_NI_SYSCALL] = (unsigned long*)sys_put_data;
-    protect_memory();
-	printk("%s: a sys_call with 2 parameters has been installed as a put_data on the sys_call_table at displacement %d\n",MODNAME,FIRST_NI_SYSCALL);
 
     /* install get_data */
-    cr0 = read_cr0();
-    unprotect_memory();
     hacked_syscall_tbl[SECOND_NI_SYSCALL] = (unsigned long*)sys_get_data;
-    protect_memory();
-    printk("%s: a sys_call with 3 parameters has been installed as a get_data on the sys_call_table at displacement %d\n",MODNAME,SECOND_NI_SYSCALL);
 
     /* install invalidate_data */
-    cr0 = read_cr0();
-    unprotect_memory();
     hacked_syscall_tbl[THIRD_NI_SYSCALL] = (unsigned long*)sys_invalidate_data;
     protect_memory();
+    printk("%s: a sys_call with 2 parameters has been installed as a put_data on the sys_call_table at displacement %d\n",MODNAME,FIRST_NI_SYSCALL);
+    printk("%s: a sys_call with 3 parameters has been installed as a get_data on the sys_call_table at displacement %d\n",MODNAME,SECOND_NI_SYSCALL);
     printk("%s: a sys_call with 1 parameters has been installed as a invalidate_data on the sys_call_table at displacement %d\n",MODNAME,THIRD_NI_SYSCALL);
 #else
 #endif
