@@ -7,10 +7,12 @@
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/string.h>
+#include <linux/version.h>
 
-#include "singlefilefs.h"
 
-#include "../rcu_list/list.h"
+//#include "singlefilefs.h"
+#include "helper.h"
+
 
 
 ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *off) {
@@ -19,9 +21,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     struct inode * the_inode = filp->f_inode;
     uint64_t file_size = the_inode->i_size;
     int ret;
-    loff_t offset;
     int block_to_read;//index of the block to be read from device
-    int idx;
     struct block *msg;
 
 
@@ -39,8 +39,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
 
     // determine if the block is valid
-    if(!list_is_valid(dev_map, BLK_INDX(*off)))
-        block_to_read = list_next_valid(dev_map, BLK_INDX(*off));
+    if(!list_is_valid(&dev_map, BLK_INDX(*off)))
+        block_to_read = list_next_valid(&dev_map, BLK_INDX(*off));
 
     if(block_to_read == -1)
         return 0; // no data available
@@ -103,7 +103,11 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
 
 
         //this work is done if the inode was not already cached
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
+        inode_init_owner(sb->s_user_ns, the_inode, NULL, S_IFDIR);//set the root user as owned of the FS root
+#else
         inode_init_owner(the_inode, NULL, S_IFREG);
+#endif
         the_inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR | S_IWGRP | S_IXUSR | S_IXGRP | S_IXOTH;
         the_inode->i_fop = &onefilefs_file_operations;
         the_inode->i_op = &onefilefs_inode_ops;

@@ -7,8 +7,18 @@
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/string.h>
+#include <linux/version.h>
+
+
 
 #include "helper.h"
+//#include "singlefilefs.h"
+
+
+
+
+list dev_map; /* map of the device */
+struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
 
 
 static struct super_operations singlefilefs_super_ops = {
@@ -57,7 +67,14 @@ int singlefilefs_fill_super(struct super_block *sb, void *data, int silent) {
     }
 
     root_inode->i_ino = SINGLEFILEFS_ROOT_INODE_NUMBER;//this is actually 10
+
+    // From kernel 5.12 inode_init_owner gets one more argument: @mnt_userns:	User namespace of the mount the inode was created from
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
+    inode_init_owner(sb->s_user_ns, root_inode, NULL, S_IFDIR);//set the root user as owned of the FS root
+#else
     inode_init_owner(root_inode, NULL, S_IFDIR);//set the root user as owned of the FS root
+#endif
+
     root_inode->i_sb = sb;
     root_inode->i_op = &onefilefs_inode_ops;//set our inode operations
     root_inode->i_fop = &onefilefs_dir_operations;//set our file operations
@@ -97,7 +114,7 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
 struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, const char *dev_name, void *data) {
 
     struct dentry *ret;
-    int i;
+    element *rcu_head;
 
     ret = mount_bdev(fs_type, flags, dev_name, data, singlefilefs_fill_super);
 
@@ -110,14 +127,12 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     /* create the map of the device */
     list_init(&dev_map);
     // insert the head
-    element *rcu_head = kmalloc(sizeof(element), GFP_KERNEL);
+    rcu_head = kmalloc(sizeof(element), GFP_KERNEL);
     rcu_head->validity = -1;
     rcu_head->key = -1;
     rcu_head->next = NULL;
     dev_map.head = rcu_head;
 
-    // init the blocks --> NO. Insert a new block in the rcu list at every put_data
-    //for(i = 0; i < NBLOCKS; i++) list_insert(&dev_map, i);
 
     return ret;
 }

@@ -1,18 +1,19 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <errno.h>
+#include <linux/slab.h>
+#include <linux/time.h>
+#include <linux/kthread.h>
+#include <linux/sched.h>
+#include <linux/spinlock.h>
+#include <linux/delay.h>
+
+
 #include "../src/helper.h"
 
-extern int main(int argc, char** argv);
-
-void * house_keeper(void * the_list);
+int house_keeper(void * the_list);
 
 void rcu_list_init(rcu_list * l){
 
 	int i;
-	pthread_t tid;
+    struct task_struct *ts;
 
 	l->epoch = 0x0;
 	l->next_epoch_index = 0x1;
@@ -23,14 +24,13 @@ void rcu_list_init(rcu_list * l){
         l->keys[i] = 0;
     }
 	l->head = NULL;
-	pthread_spin_init(&l->write_lock,PTHREAD_PROCESS_PRIVATE);
+	//pthread_spin_init(&l->write_lock,PTHREAD_PROCESS_PRIVATE);
+    rwlock_init(&(l->write_lock));
 
-    //TODO: make it a kernel thread (deamon)
-    if ((pthread_create(&tid,NULL,house_keeper,(void*)(&dev_map)) != 0)){//this thread can be activated
+    ts = kthread_run(house_keeper, (void *)&dev_map, "house-keeper-deamon");
+    if (ts == NULL){//this thread can be activated
                                     //using some different solution
-            errno = ESRCH;
-            perror("application startup error - RCU-list house-keeper not activated\n");
-            fflush(stderr);
+            printk(KERN_INFO "%s: application startup error - RCU-list house-keeper not activated\n", MOD_NAME);
     };
 
 }
@@ -72,13 +72,12 @@ int rcu_list_first_free(rcu_list *l){
 
     unsigned long * epoch = &(l->epoch);
     unsigned long my_epoch;
-    element *p;
     int index;
     int i;
 
     my_epoch = __sync_fetch_and_add(epoch,1);
 
-    pthread_spin_lock(&(l->write_lock));
+    write_lock(&(l->write_lock));
 
     for(i = 0; i < NBLOCKS; i++){
         if(l->keys[i] == 0){
@@ -87,7 +86,7 @@ int rcu_list_first_free(rcu_list *l){
         }
     }
 
-    pthread_spin_unlock(&(l->write_lock));
+    write_unlock(&(l->write_lock));
 
 
     index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
@@ -153,9 +152,9 @@ int rcu_list_insert(rcu_list *l, long key){
     p->validity = 1;
 
 	AUDIT
-	printf("insertion: waiting for lock\n");
+	printk(KERN_INFO "%s: insertion: waiting for lock\n", MOD_NAME);
 
-	pthread_spin_lock(&(l->write_lock));
+    write_lock(&(l->write_lock));
 
     //traverse and insert
     tmp = l->head;
@@ -169,11 +168,11 @@ int rcu_list_insert(rcu_list *l, long key){
 
 	AUDIT
 	while(p){
-		printf("elem %d\n",p->key);
+		printk(KERN_INFO "%s: elem %ld\n", MOD_NAME, p->key);
 		p = p->next;
 	}
 
-	pthread_spin_unlock(&l->write_lock);
+    write_unlock(&l->write_lock);
 	
 	return 1;
 
@@ -186,14 +185,13 @@ int rcu_list_insert(rcu_list *l, long key){
 int rcu_list_remove(rcu_list *l, long key){
 
 	element * p, *removed = NULL;
-	int grace_epoch;
 	unsigned long last_epoch;
 	unsigned long updated_epoch;
 	unsigned long grace_period_threads;
 	int index;
-	
 
-	pthread_spin_lock(&l->write_lock);
+
+    write_lock(&l->write_lock);
 
 	//traverse and delete
 	p = l->head;
@@ -225,16 +223,16 @@ int rcu_list_remove(rcu_list *l, long key){
 	grace_period_threads = last_epoch & (~MASK); 
 
 	AUDIT
-	printf("deletion: waiting grace-full period (target value is %d)\n",grace_period_threads);
+	printk(KERN_INFO "%s: deletion: waiting grace-full period (target value is %lu)\n",MOD_NAME, grace_period_threads);
 	while(l->standing[index] < grace_period_threads);
 	l->standing[index] = 0;
     __sync_fetch_and_sub(&l->keys[key],1);
 
 
-    pthread_spin_unlock(&l->write_lock);
+    write_unlock(&l->write_lock);
 
 	if(removed){
-		free(removed);
+		kfree(removed);
 		return 1;
 	}
 	
@@ -243,9 +241,8 @@ int rcu_list_remove(rcu_list *l, long key){
 }
 
 
-void * house_keeper(void * the_list){
+int house_keeper(void * the_list){
 
-	int grace_epoch;
 	unsigned long last_epoch;
 	unsigned long updated_epoch;
 	unsigned long grace_period_threads;
@@ -254,14 +251,14 @@ void * house_keeper(void * the_list){
 	rcu_list * l = (rcu_list*) the_list;
 
 redo:
-	sleep(PERIOD);
+	msleep(PERIOD*1000); //*1000 is for have 2 seconds
 
-	pthread_spin_lock(&l->write_lock);
+    write_lock(&l->write_lock);
 	
 	updated_epoch = (l->next_epoch_index) ? MASK : 0;
-	//printf("next epoch index is %d - next epoch is %p\n",l->next_epoch_index,updated_epoch);
+	//printk("next epoch index is %d - next epoch is %p\n",l->next_epoch_index,updated_epoch);
 
-    	l->next_epoch_index += 1;
+    l->next_epoch_index += 1;
 	l->next_epoch_index %= 2;	
 
 	last_epoch = __atomic_exchange_n (&(l->epoch), updated_epoch, __ATOMIC_SEQ_CST); 
@@ -269,14 +266,14 @@ redo:
 	grace_period_threads = last_epoch & (~MASK); 
 
 	AUDIT
-	printf("house keeping: waiting grace-full period (target value is %d)\n",grace_period_threads);
+	printk(KERN_INFO "%s: house keeping: waiting grace-full period (target value is %lu)\n", MOD_NAME, grace_period_threads);
 	while(l->standing[index] < grace_period_threads);
 	l->standing[index] = 0;
 
-	pthread_spin_unlock(&l->write_lock);
+    write_unlock(&l->write_lock);
 
 	goto redo;
 
-	return NULL;
+	return 0;
 }
 

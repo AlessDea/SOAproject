@@ -1,5 +1,5 @@
 obj-m += singlefilefs.o
-singlefilefs-objs += singlefilefs_src.o file.o dir.o
+singlefilefs-objs += singlefilefs_src.o file.o dir.o ../rcu_list/rcu-list.o
 
 NBLOCKS:= 10
 

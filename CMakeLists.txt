@@ -10,7 +10,7 @@ include_directories(src)
 include_directories(usctm/include)
 
 add_executable(SOAproject
-        rcu_list/list.h
+        src/list.h
         rcu_list/rcu-list.c
         src/dir.c
         src/file.c

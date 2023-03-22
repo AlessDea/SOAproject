@@ -42,8 +42,8 @@
 #include <linux/syscalls.h>
 #include "./include/vtpmo.h"
 
-#include "../src/singlefilefs.h"
-#include "../rcu_list/list.h"
+//#include "../src/singlefilefs.h"
+#include "helper.h"
 
 
 MODULE_LICENSE("GPL");

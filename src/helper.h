@@ -5,79 +5,10 @@
 
 #ifndef SOAPROJECT_HELPER_H
 #define SOAPROJECT_HELPER_H
-#include <stdint.h>
-#include <linux/types.h>
+
+
 #include <linux/fs.h>
-#include <string.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <pthread.h>
 #include <linux/types.h>
-
-
-/* Single File System */
-//----------------------------------------------------------------
-
-#define MOD_NAME "SINGLE FILE FS"
-
-#define MAGIC 0x42424242
-#define DEFAULT_BLOCK_SIZE 4096
-#define SB_BLOCK_NUMBER 0
-#define DEFAULT_FILE_INODE_BLOCK 1
-
-#define FILENAME_MAXLEN 255
-
-#define SINGLEFILEFS_ROOT_INODE_NUMBER 10
-#define SINGLEFILEFS_FILE_INODE_NUMBER 1
-
-#define SINGLEFILEFS_INODES_BLOCK_NUMBER 1
-
-#define UNIQUE_FILE_NAME "user-msgs"
-
-//----------------------------------------------------------------
-
-
-//inode definition
-struct onefilefs_inode {
-    mode_t mode;//not exploited
-    uint64_t inode_no;
-    uint64_t data_block_number;//not exploited
-
-    union {
-        uint64_t file_size;
-        uint64_t dir_children_count;
-    };
-};
-
-//dir definition (how the dir datablock is organized)
-struct onefilefs_dir_record {
-    char filename[FILENAME_MAXLEN];
-    uint64_t inode_no;
-};
-
-
-//superblock definition
-struct onefilefs_sb_info {
-    uint64_t version;
-    uint64_t magic;
-    uint64_t block_size;
-    uint64_t inodes_count;//not exploited
-    uint64_t free_blocks;//not exploited
-
-    //padding to fit into a single block
-    char padding[ (4 * 1024) - (5 * sizeof(uint64_t))];
-};
-
-// file.c
-extern const struct inode_operations onefilefs_inode_ops;
-extern const struct file_operations onefilefs_file_operations;
-
-// dir.c
-extern const struct file_operations onefilefs_dir_operations;
-
-struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
-
-//----------------------------------------------------------------
 
 
 /* User Messages Driver */
@@ -139,14 +70,14 @@ typedef struct rcu_list{
     //on different cache lines
     unsigned long epoch; //a different cache line for this can also help
     int next_epoch_index;
-    pthread_spinlock_t write_lock;
+    rwlock_t write_lock;
     int keys[NBLOCKS];
     element * head;
 } __attribute__((packed)) rcu_list;
 
 typedef rcu_list list __attribute__((aligned(64)));
 
-list dev_map; /* map of the device */
+extern list dev_map; /* map of the device */
 
 
 #define list_insert rcu_list_insert
@@ -167,5 +98,71 @@ int rcu_list_remove(rcu_list *l, long key);
 int rcu_list_next_valid(rcu_list *l, long start_key);
 
 int rcu_list_first_free(rcu_list *l);
+
+
+/* ------------------------------------------------------------- */
+
+
+#include <linux/types.h>
+#include <linux/fs.h>
+
+
+#define MOD_NAME "SINGLE FILE FS"
+
+#define MAGIC 0x42424242
+#define DEFAULT_BLOCK_SIZE 4096
+#define SB_BLOCK_NUMBER 0
+#define DEFAULT_FILE_INODE_BLOCK 1
+
+#define FILENAME_MAXLEN 255
+
+#define SINGLEFILEFS_ROOT_INODE_NUMBER 10
+#define SINGLEFILEFS_FILE_INODE_NUMBER 1
+
+#define SINGLEFILEFS_INODES_BLOCK_NUMBER 1
+
+#define UNIQUE_FILE_NAME "user-msgs"
+
+
+//inode definition
+struct onefilefs_inode {
+    mode_t mode;//not exploited
+    uint64_t inode_no;
+    uint64_t data_block_number;//not exploited
+
+    union {
+        uint64_t file_size;
+        uint64_t dir_children_count;
+    };
+};
+
+//dir definition (how the dir datablock is organized)
+struct onefilefs_dir_record {
+    char filename[FILENAME_MAXLEN];
+    uint64_t inode_no;
+};
+
+
+//superblock definition
+struct onefilefs_sb_info {
+    uint64_t version;
+    uint64_t magic;
+    uint64_t block_size;
+    uint64_t inodes_count;//not exploited
+    uint64_t free_blocks;//not exploited
+
+    //padding to fit into a single block
+    char padding[ (4 * 1024) - (5 * sizeof(uint64_t))];
+};
+
+// file.c
+extern const struct inode_operations onefilefs_inode_ops;
+extern const struct file_operations onefilefs_file_operations;
+
+// dir.c
+extern const struct file_operations onefilefs_dir_operations;
+
+extern struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
+
 
 #endif //SOAPROJECT_HELPER_H

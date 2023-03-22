@@ -3,10 +3,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "helper.h"
+#include <linux/fs.h>
+
+
+#include "singlefilefs.h"
+
 
 /*
 	This makefs will write the following information onto the disk

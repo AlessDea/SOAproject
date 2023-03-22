@@ -3,8 +3,6 @@
 
 #include <linux/types.h>
 #include <linux/fs.h>
-#include <stdint.h>
-#include "../rcu_list/list.h"
 
 
 #define MOD_NAME "SINGLE FILE FS"
@@ -22,8 +20,6 @@
 #define SINGLEFILEFS_INODES_BLOCK_NUMBER 1
 
 #define UNIQUE_FILE_NAME "user-msgs"
-
-//----------------------------------------------------------------
 
 
 //inode definition
@@ -63,10 +59,6 @@ extern const struct file_operations onefilefs_file_operations;
 
 // dir.c
 extern const struct file_operations onefilefs_dir_operations;
-
-struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
-
-//----------------------------------------------------------------
 
 
 #endif
