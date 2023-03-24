@@ -39,7 +39,7 @@ include CMakeFiles/rules.ninja
 #############################################
 # Logical path to working directory; prefix for absolute paths.
 
-cmake_ninja_workdir = /home/alessandrodea/Scrivania/SOAproject/cmake-build-debug/
+cmake_ninja_workdir = /home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug/
 # =============================================================================
 # Object build statements for EXECUTABLE target SOAproject
 
@@ -49,61 +49,77 @@ cmake_ninja_workdir = /home/alessandrodea/Scrivania/SOAproject/cmake-build-debug
 
 build cmake_object_order_depends_target_SOAproject: phony || CMakeFiles/SOAproject.dir
 
-build CMakeFiles/SOAproject.dir/rcu_list/rcu-list.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/rcu_list/rcu-list.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/rcu_list/rcu-list.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list/rcu-list.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/rcu_list/rcu-list.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/rcu_list
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
-build CMakeFiles/SOAproject.dir/src/dir.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/src/dir.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/src/dir.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/src/dir.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/src/dir.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/src
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
-build CMakeFiles/SOAproject.dir/src/file.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/src/file.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/src/file.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/src/file.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/src/file.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/src
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
-build CMakeFiles/SOAproject.dir/src/singlefilefs_src.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/src/singlefilefs_src.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/src/singlefilefs_src.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/src/singlefilefs_src.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/src/singlefilefs_src.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/src
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
-build CMakeFiles/SOAproject.dir/src/singlefilemakefs.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/src/singlefilemakefs.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/src/singlefilemakefs.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/src/singlefilemakefs.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/src/singlefilemakefs.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/src
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
-build CMakeFiles/SOAproject.dir/usctm/lib/vtpmo.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/usctm/lib/vtpmo.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/usctm/lib/vtpmo.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/usctm/lib/vtpmo.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/usctm/lib/vtpmo.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/usctm/lib
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
-build CMakeFiles/SOAproject.dir/usctm/the_usctm.mod.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/usctm/the_usctm.mod.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/usctm/the_usctm.mod.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/usctm/the_usctm.mod.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/usctm/the_usctm.mod.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/usctm
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
-build CMakeFiles/SOAproject.dir/usctm/usctm.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject/usctm/usctm.c || cmake_object_order_depends_target_SOAproject
+build CMakeFiles/SOAproject.dir/usctm/usctm.c.o: C_COMPILER__SOAproject_Debug /home/alessandrodea/Scrivania/SOAproject_tmp/usctm/usctm.c || cmake_object_order_depends_target_SOAproject
   DEP_FILE = CMakeFiles/SOAproject.dir/usctm/usctm.c.o.d
   FLAGS = -g -std=gnu11
-  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject/rcu_list -I/home/alessandrodea/Scrivania/SOAproject/src -I/home/alessandrodea/Scrivania/SOAproject/usctm/include
+  INCLUDES = -I/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list -I/home/alessandrodea/Scrivania/SOAproject_tmp/src -I/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   OBJECT_FILE_DIR = CMakeFiles/SOAproject.dir/usctm
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
+  TARGET_PDB = SOAproject.pdb
 
 
 # =============================================================================
@@ -118,15 +134,16 @@ build SOAproject: C_EXECUTABLE_LINKER__SOAproject_Debug CMakeFiles/SOAproject.di
   OBJECT_DIR = CMakeFiles/SOAproject.dir
   POST_BUILD = :
   PRE_LINK = :
+  TARGET_COMPILE_PDB = CMakeFiles/SOAproject.dir/
   TARGET_FILE = SOAproject
-  TARGET_PDB = SOAproject.dbg
+  TARGET_PDB = SOAproject.pdb
 
 
 #############################################
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/alessandrodea/Scrivania/SOAproject/cmake-build-debug && /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/bin/ccmake -S/home/alessandrodea/Scrivania/SOAproject -B/home/alessandrodea/Scrivania/SOAproject/cmake-build-debug
+  COMMAND = cd /home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug && /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/bin/ccmake -S/home/alessandrodea/Scrivania/SOAproject_tmp -B/home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -138,7 +155,7 @@ build edit_cache: phony CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /home/alessandrodea/Scrivania/SOAproject/cmake-build-debug && /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/bin/cmake --regenerate-during-build -S/home/alessandrodea/Scrivania/SOAproject -B/home/alessandrodea/Scrivania/SOAproject/cmake-build-debug
+  COMMAND = cd /home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug && /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/bin/cmake --regenerate-during-build -S/home/alessandrodea/Scrivania/SOAproject_tmp -B/home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -154,7 +171,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 # =============================================================================
 
 #############################################
-# Folder: /home/alessandrodea/Scrivania/SOAproject/cmake-build-debug
+# Folder: /home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug
 
 build all: phony SOAproject
 
@@ -165,14 +182,14 @@ build all: phony SOAproject
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | ../CMakeLists.txt /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCommonLanguageInclude.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeGenericSystem.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeInitializeConfigs.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeLanguageInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInitialize.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.23.2/CMakeCCompiler.cmake CMakeFiles/3.23.2/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | ../CMakeLists.txt /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCCompiler.cmake.in /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCCompilerABI.c /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCommonLanguageInclude.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCompilerIdDetection.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompileFeatures.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompilerABI.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompilerId.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineSystem.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeFindBinUtils.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeGenericSystem.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeInitializeConfigs.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeLanguageInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseImplicitIncludeInfo.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseImplicitLinkInfo.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseLibraryArchitecture.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystem.cmake.in /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInitialize.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeTestCCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeTestCompilerCommon.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/ADSP-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/ARMCC-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/ARMClang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/AppleClang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Borland-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Clang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Cray-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GHS-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-FindBinUtils.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/HP-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IAR-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Intel-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/LCC-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/MSVC-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/NVHPC-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/PGI-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/PathScale-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/SCO-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/TI-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Watcom-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/XL-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/zOS-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Internal/FeatureTesting.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.23.2/CMakeCCompiler.cmake CMakeFiles/3.23.2/CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build ../CMakeLists.txt /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCommonLanguageInclude.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeGenericSystem.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeInitializeConfigs.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeLanguageInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInitialize.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.23.2/CMakeCCompiler.cmake CMakeFiles/3.23.2/CMakeSystem.cmake: phony
+build ../CMakeLists.txt /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCCompiler.cmake.in /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCCompilerABI.c /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCommonLanguageInclude.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCompilerIdDetection.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompileFeatures.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompilerABI.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineCompilerId.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeDetermineSystem.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeFindBinUtils.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeGenericSystem.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeInitializeConfigs.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeLanguageInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseImplicitIncludeInfo.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseImplicitLinkInfo.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseLibraryArchitecture.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystem.cmake.in /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInformation.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeSystemSpecificInitialize.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeTestCCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/CMakeTestCompilerCommon.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/ADSP-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/ARMCC-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/ARMClang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/AppleClang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Borland-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Clang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Cray-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GHS-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU-FindBinUtils.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/HP-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IAR-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Intel-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/LCC-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/MSVC-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/NVHPC-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/PGI-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/PathScale-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/SCO-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/TI-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/Watcom-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/XL-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Compiler/zOS-C-DetermineCompiler.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Internal/FeatureTesting.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU-C.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux-GNU.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/Linux.cmake /home/alessandrodea/clion-2022.2.1/bin/cmake/linux/share/cmake-3.23/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.23.2/CMakeCCompiler.cmake CMakeFiles/3.23.2/CMakeSystem.cmake: phony
 
 
 #############################################

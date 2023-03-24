@@ -1,4 +1,4 @@
-# Install script for directory: /home/alessandrodea/Scrivania/SOAproject
+# Install script for directory: /home/alessandrodea/Scrivania/SOAproject_tmp
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/alessandrodea/Scrivania/SOAproject/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

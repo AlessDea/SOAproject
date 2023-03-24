@@ -39,7 +39,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "SOAproject::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-SOAproject-Debug-bc63d0bcba2a6de16f82.json",
+					"jsonFile" : "target-SOAproject-Debug-7a60f1aee3ceaec6ecd7.json",
 					"name" : "SOAproject",
 					"projectIndex" : 0
 				}
@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/home/alessandrodea/Scrivania/SOAproject/cmake-build-debug",
-		"source" : "/home/alessandrodea/Scrivania/SOAproject"
+		"build" : "/home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug",
+		"source" : "/home/alessandrodea/Scrivania/SOAproject_tmp"
 	},
 	"version" : 
 	{

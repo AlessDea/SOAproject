@@ -44,7 +44,7 @@ struct block{
 
 /* RCU */
 //----------------------------------------------------------------
-#define  AUDIT if(0) //this is a general audit flag
+#define  AUDIT if(1) //this is a general audit flag
 
 
 //this defines the RCU house keeping period

@@ -25,7 +25,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     struct block *msg;
 
 
-    printk("%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
+    printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
 
     //this operation is not synchronized
     //*off can be changed concurrently
@@ -59,7 +59,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //compute the actual index of the the block to be read from device
     block_to_read += 2; //the value 2 accounts for superblock and file-inode on device
 
-    printk("%s: read operation must access block %d of the device",MOD_NAME, block_to_read);
+    printk(KERN_INFO "%s: read operation must access block %d of the device",MOD_NAME, block_to_read);
 
     bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
     if(!bh){
@@ -86,7 +86,7 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
     struct buffer_head *bh = NULL;
     struct inode *the_inode = NULL;
 
-    printk("%s: running the lookup inode-function for name %s",MOD_NAME,child_dentry->d_name.name);
+    printk(KERN_INFO "%s: running the lookup inode-function for name %s",MOD_NAME,child_dentry->d_name.name);
 
     if(!strcmp(child_dentry->d_name.name, UNIQUE_FILE_NAME)){
 

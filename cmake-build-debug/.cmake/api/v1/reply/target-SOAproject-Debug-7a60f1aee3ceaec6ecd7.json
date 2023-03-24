@@ -64,15 +64,15 @@
 			[
 				{
 					"backtrace" : 2,
-					"path" : "/home/alessandrodea/Scrivania/SOAproject/rcu_list"
+					"path" : "/home/alessandrodea/Scrivania/SOAproject_tmp/rcu_list"
 				},
 				{
 					"backtrace" : 3,
-					"path" : "/home/alessandrodea/Scrivania/SOAproject/src"
+					"path" : "/home/alessandrodea/Scrivania/SOAproject_tmp/src"
 				},
 				{
 					"backtrace" : 4,
-					"path" : "/home/alessandrodea/Scrivania/SOAproject/usctm/include"
+					"path" : "/home/alessandrodea/Scrivania/SOAproject_tmp/usctm/include"
 				}
 			],
 			"language" : "C",
@@ -151,7 +151,7 @@
 	[
 		{
 			"backtrace" : 1,
-			"path" : "rcu_list/list.h",
+			"path" : "src/list.h",
 			"sourceGroupIndex" : 0
 		},
 		{

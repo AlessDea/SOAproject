@@ -8,11 +8,25 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/version.h>
+#include "../scth/include/scth.h"
 
 
 
 #include "helper.h"
 //#include "singlefilefs.h"
+
+
+
+
+unsigned long the_syscall_table = 0x0;
+module_param(the_syscall_table, ulong, 0660);
+
+
+unsigned long the_ni_syscall;
+
+unsigned long new_sys_call_array[] = {0x0, 0x0, 0x0};//please set to sys_put_work at startup
+#define HACKED_ENTRIES (int)(sizeof(new_sys_call_array)/sizeof(unsigned long))
+int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
 
 
 
@@ -119,9 +133,9 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     ret = mount_bdev(fs_type, flags, dev_name, data, singlefilefs_fill_super);
 
     if (unlikely(IS_ERR(ret)))
-        printk("%s: error mounting onefilefs",MOD_NAME);
+        printk(KERN_INFO "%s: error mounting onefilefs",MOD_NAME);
     else
-        printk("%s: singlefilefs is succesfully mounted on from device %s\n",MOD_NAME,dev_name);
+        printk(KERN_INFO "%s: singlefilefs is succesfully mounted on from device %s\n",MOD_NAME,dev_name);
 
 
     /* create the map of the device */
@@ -149,14 +163,44 @@ static struct file_system_type onefilefs_type = {
 
 static int singlefilefs_init(void) {
 
+    int i;
     int ret;
+
+    AUDIT{
+        printk(KERN_INFO "%s: sys_call_table address %px\n",MOD_NAME,(void*)the_syscall_table);
+        printk(KERN_INFO "%s: initializing - hacked entries %d\n",MOD_NAME,HACKED_ENTRIES);
+    }
+
+    new_sys_call_array[0] = (unsigned long)sys_put_data;
+    new_sys_call_array[1] = (unsigned long)sys_get_data;
+    new_sys_call_array[2] = (unsigned long)sys_invalidate_data;
+
+    ret = get_entries(restore,HACKED_ENTRIES,(unsigned long*)the_syscall_table,&the_ni_syscall);
+
+
+    if (ret != HACKED_ENTRIES){
+        printk(KERN_INFO "%s: could not hack %d entries (just %d)\n",MOD_NAME,HACKED_ENTRIES,ret);
+        return -1;
+    }
+
+    unprotect_memory();
+
+    for(i=0;i<HACKED_ENTRIES;i++){
+        ((unsigned long *)the_syscall_table)[restore[i]] = (unsigned long)new_sys_call_array[i];
+    }
+
+    protect_memory();
+
+    printk(KERN_INFO "%s: all new system-calls correctly installed on sys-call table\n",MOD_NAME);
+
+
 
     //register filesystem
     ret = register_filesystem(&onefilefs_type);
     if (likely(ret == 0))
-        printk("%s: sucessfully registered singlefilefs\n",MOD_NAME);
+        printk(KERN_INFO "%s: sucessfully registered singlefilefs\n",MOD_NAME);
     else
-        printk("%s: failed to register singlefilefs - error %d", MOD_NAME,ret);
+        printk(KERN_INFO "%s: failed to register singlefilefs - error %d", MOD_NAME,ret);
 
     return ret;
 }
@@ -170,9 +214,9 @@ static void singlefilefs_exit(void) {
     ret = unregister_filesystem(&onefilefs_type);
 
     if (likely(ret == 0))
-        printk("%s: sucessfully unregistered file system driver\n",MOD_NAME);
+        printk(KERN_INFO "%s: sucessfully unregistered file system driver\n",MOD_NAME);
     else
-        printk("%s: failed to unregister singlefilefs driver - error %d", MOD_NAME, ret);
+        printk(KERN_INFO "%s: failed to unregister singlefilefs driver - error %d", MOD_NAME, ret);
 }
 
 

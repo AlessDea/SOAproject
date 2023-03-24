@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/alessandrodea/Scrivania/SOAproject/cmake-build-debug"
+			"value" : "/home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -463,7 +463,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/alessandrodea/Scrivania/SOAproject"
+			"value" : "/home/alessandrodea/Scrivania/SOAproject_tmp"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -986,18 +986,6 @@
 			"value" : "FALSE"
 		},
 		{
-			"name" : "KernelHeaders_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "The directory containing a CMake configuration file for KernelHeaders."
-				}
-			],
-			"type" : "PATH",
-			"value" : "KernelHeaders_DIR-NOTFOUND"
-		},
-		{
 			"name" : "SOAproject_BINARY_DIR",
 			"properties" : 
 			[
@@ -1007,7 +995,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/alessandrodea/Scrivania/SOAproject/cmake-build-debug"
+			"value" : "/home/alessandrodea/Scrivania/SOAproject_tmp/cmake-build-debug"
 		},
 		{
 			"name" : "SOAproject_IS_TOP_LEVEL",
@@ -1031,7 +1019,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/alessandrodea/Scrivania/SOAproject"
+			"value" : "/home/alessandrodea/Scrivania/SOAproject_tmp"
 		}
 	],
 	"kind" : "cache",
