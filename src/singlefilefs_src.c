@@ -19,8 +19,6 @@
 
 
 unsigned long the_syscall_table = 0x0;
-module_param(the_syscall_table, ulong, 0660);
-
 
 unsigned long the_ni_syscall;
 
@@ -163,8 +161,19 @@ static struct file_system_type onefilefs_type = {
 
 static int singlefilefs_init(void) {
 
-    int i;
     int ret;
+
+    /* looking for syscall table */
+    int i;
+
+    printk(KERN_INFO "%s: initializing\n",MOD_NAME);
+
+    syscall_table_finder();
+
+    if(!hacked_syscall_tbl){
+        printk(KERN_INFO "%s: failed to find the sys_call_table\n",MOD_NAME);
+        return -1;
+    }
 
     AUDIT{
         printk(KERN_INFO "%s: sys_call_table address %px\n",MOD_NAME,(void*)the_syscall_table);

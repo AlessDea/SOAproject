@@ -1,7 +1,6 @@
 obj-m += singlefilefs.o
-singlefilefs-objs += singlefilefs_src.o file.o dir.o ../rcu_list/rcu-list.o ../scth/scth.o ../scth/newsyscalls.o
+singlefilefs-objs += singlefilefs_src.o file.o dir.o ../rcu_list/rcu-list.o ../scth/scth.o ../scth/newsyscalls.o ../scth/lib/sys_tbl_finder.o ../scth/lib/vtpmo.o
 
-A = $(shell cat /sys/module/the_usctm/parameters/sys_call_table_address)
 NBLOCKS:= 10
 
 all:
@@ -20,5 +19,5 @@ create-fs:
 mount-fs:
 	mount -o loop -t singlefilefs image ./mount/
 
-int:
-	insmod singlefilefs.ko the_syscall_table=$(A)
+ins:
+	insmod singlefilefs.ko

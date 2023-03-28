@@ -104,7 +104,7 @@ int rcu_list_first_free(rcu_list *l){
 
 
 
-int rcu_list_next_valid(rcu_list *l, long start_key){
+long rcu_list_next_valid(rcu_list *l, long start_key){
     unsigned long * epoch = &(l->epoch);
     unsigned long my_epoch;
     element *p;
@@ -204,6 +204,7 @@ int rcu_list_remove(rcu_list *l, long key){
 	else{
 		while(p != NULL){
 			if ( p->next != NULL && p->next->key == key){
+                __sync_fetch_and_sub(&l->keys[key], 1); // atomic block free key for new use
 				removed = p->next;
 				p->next = p->next->next;
 				asm volatile("mfence");//make it visible to readers

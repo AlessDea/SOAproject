@@ -49,7 +49,7 @@ struct block{
 
 //this defines the RCU house keeping period
 #ifndef PERIOD
-#define PERIOD 1
+#define PERIOD 120
 #endif
 
 
@@ -95,7 +95,7 @@ int rcu_list_insert(rcu_list *l, long key);
 
 int rcu_list_remove(rcu_list *l, long key);
 
-int rcu_list_next_valid(rcu_list *l, long start_key);
+long rcu_list_next_valid(rcu_list *l, long start_key);
 
 int rcu_list_first_free(rcu_list *l);
 

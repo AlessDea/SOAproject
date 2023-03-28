@@ -84,29 +84,34 @@
 
 
     /* perform the write in bh */
-
     blk = kzalloc(sizeof(struct block *), GFP_KERNEL);
 
-    blk->metadata = VALID_MASK ^ size;
+    blk->metadata = VALID_MASK ^ (size + 1);
 
-
-    memcpy(blk->data, source, size);
+    memcpy(blk->data, source, size + 1); // +1 for the null terminator
 
     // get the buffer_head
-    bh = (struct buffer_head *)sb_bread(my_bdev_sb, off+2);
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, off+2); // +2 for the superblock and inode blocks
     if(!bh){
         return -EIO;
     }
 
-    memcpy(bh->b_data, (char *)blk, BLOCK_SSIZE);
+    printk(KERN_INFO "%s: thread %d request for put_data sys_call .. trying to write msg: %s\n",MOD_NAME,current->pid, blk->data);
+
+    memcpy(bh->b_data, (char *)blk, sizeof(struct block));
+
+    printk(KERN_INFO "%s: thread %d request for put_data sys_call .. wrote msg: %s\n",MOD_NAME,current->pid, ((struct block *)(bh->b_data))->data);
 
     mark_buffer_dirty(bh);
     brelse(bh);
 
     /* the block in the list must be visible when the write in bh is done */
-    if(!list_insert(&dev_map, off))
+    if(!list_insert(&dev_map, off)){
+        printk(KERN_INFO "%s: thread %d request for put_data sys_call error\n",MOD_NAME,current->pid);
         return -ENOMEM;
+    }
 
+    printk(KERN_INFO "%s: thread %d request for put_data sys_call success\n",MOD_NAME,current->pid);
 
 
     return off;
@@ -124,17 +129,21 @@
     struct block *blk;
 
 
-    printk("%s: thread %d requests a get_data sys_call\n",MOD_NAME,current->pid);
+    printk(KERN_INFO "%s: thread %d requests a get_data sys_call\n",MOD_NAME,current->pid);
 
     /* check if offset exists */
-    if(BLK_INDX(offset) > NBLOCKS-1)
-        return -ENODATA;
+    //if(BLK_INDX(offset) > NBLOCKS-1)
+    //    return -ENODATA;
 
-    if(rcu_list_is_valid(&dev_map, BLK_INDX(offset)) == 0)
+    //off = BLK_INDX(offset);
+
+    if(rcu_list_is_valid(&dev_map, offset) == 0){
+        printk(KERN_INFO "%s: thread %d request for get_data sys_call error: the block is not available\n", MOD_NAME, current->pid);
         return -ENODATA;
+    }
 
     // get the buffer_head
-    bh = (struct buffer_head *)sb_bread(my_bdev_sb, BLK_INDX(offset)+2);
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset+2);
     if(!bh){
         return -EIO;
     }
@@ -143,9 +152,11 @@
 
     len = MSG_LEN(blk->metadata);
 
-    memcpy(destination, blk->data, (len > size) ? size : len);
+    memcpy(destination, blk->data, (len > size) ? (size+1) : (len+1));
 
     brelse(bh);
+
+    printk(KERN_INFO "%s: thread %d request for get_data sys_call success\n",MOD_NAME,current->pid);
 
     return (len > size) ? size : len;
 
@@ -166,16 +177,17 @@
     printk("%s: thread %d requests a invalidate_data sys_call\n",MOD_NAME,current->pid);
 
     // check if the block is already invalid
-    ret = list_is_valid(&dev_map, BLK_INDX(offset));
-    if(ret == 0)
-    return 0; //already invalid
-
+    ret = list_is_valid(&dev_map, offset);
+    if(ret == 0){
+        printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
+        return 0; //already invalid
+    }
     // update the device map setting invalid the block at offset
-    list_remove(&dev_map, BLK_INDX(offset));
+    list_remove(&dev_map, offset);
     // at this point the upcoming reads operations don't find the invalidated block in the list
 
     // update the metadata of that block
-    bh = (struct buffer_head *)sb_bread(my_bdev_sb, BLK_INDX(offset));
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset);
     if(!bh){
     return -EIO;
     }
@@ -185,6 +197,9 @@
 
     mark_buffer_dirty(bh);
     brelse(bh);
+
+
+    printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call success\n",MOD_NAME,current->pid);
 
 
     return 0;

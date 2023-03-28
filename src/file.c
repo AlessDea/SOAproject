@@ -21,8 +21,9 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     struct inode * the_inode = filp->f_inode;
     uint64_t file_size = the_inode->i_size;
     int ret;
-    int block_to_read;//index of the block to be read from device
+    long block_to_read;//index of the block to be read from device
     struct block *msg;
+    size_t rem;
 
 
     printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
@@ -32,10 +33,32 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //add synchronization if you need it for any reason
 
     //check that *off is within boundaries
-    if (*off >= file_size)
+    /*if (*off >= file_size)
         return 0;
     else if (*off + len > file_size)
-        len = file_size - *off;
+        len = file_size - *off;*/
+
+    // la seguente è un test per verificare se funziona. In teoria bisogna far si che venga aggiornato
+    // il file_size, ovvero filp->the_inode->i_size ad ogni scrittura del file
+
+    if(*off < 0) return 0;
+
+    if(*off > BLOCK_SSIZE*NBLOCKS){
+        // out of bundaries
+        return 0;
+    }else if(*off + len > BLOCK_SSIZE*NBLOCKS){
+        len = BLOCK_SSIZE*NBLOCKS - *off;
+    }else
+
+    // now check if len is the block size boundary
+    if(len > BLOCK_SSIZE){
+        rem = len - BLOCK_SSIZE;
+    }else{
+        rem = len;
+    }
+
+
+    block_to_read = BLK_INDX(*off);
 
 
     // determine if the block is valid
@@ -48,7 +71,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
 
     //determine the block level offset for the operation (the offset in the block)
-    // for me every read must read the entire block ==> from offset = 0
+    // TODO: the read operation must must be done from the offset specified and if size goes out the block's boundary then read at next block the remaining bytes
     //offset = *off % DEFAULT_BLOCK_SIZE;
 
 
@@ -59,7 +82,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //compute the actual index of the the block to be read from device
     block_to_read += 2; //the value 2 accounts for superblock and file-inode on device
 
-    printk(KERN_INFO "%s: read operation must access block %d of the device",MOD_NAME, block_to_read);
+    printk(KERN_INFO "%s: read operation must access block %ld of the device", MOD_NAME, block_to_read);
 
     bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
     if(!bh){
@@ -69,12 +92,15 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
     msg = (struct block *)bh->b_data;
 
-    ret = copy_to_user(buf, msg->data, len);
+    if(rem > MSG_LEN(msg->metadata))
+        rem = MSG_LEN(msg->metadata);
 
-    *off += (len - ret);
+    ret = copy_to_user(buf, msg->data, rem);
+
+    *off += (rem - ret);
     brelse(bh);
 
-    return len - ret;
+    return rem - ret;
 
 }
 
