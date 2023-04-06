@@ -16,8 +16,6 @@
 //#include "singlefilefs.h"
 
 
-
-
 unsigned long the_syscall_table = 0x0;
 
 unsigned long the_ni_syscall;
@@ -25,7 +23,6 @@ unsigned long the_ni_syscall;
 unsigned long new_sys_call_array[] = {0x0, 0x0, 0x0};//please set to sys_put_work at startup
 #define HACKED_ENTRIES (int)(sizeof(new_sys_call_array)/sizeof(unsigned long))
 int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
-
 
 
 
@@ -73,7 +70,7 @@ int singlefilefs_fill_super(struct super_block *sb, void *data, int silent) {
     sb->s_op = &singlefilefs_super_ops;//set our own operations
 
 
-    root_inode = iget_locked(sb, 0);//get a root inode indexed with 0 from cache
+    root_inode = iget_locked(sb, 0); //get a root inode indexed with 0 from cache
     if (!root_inode){
         return -ENOMEM;
     }
@@ -166,41 +163,47 @@ static int singlefilefs_init(void) {
     /* looking for syscall table */
     int i;
 
-    printk(KERN_INFO "%s: initializing\n",MOD_NAME);
+    printk(KERN_INFO
+    "%s: initializing\n", MOD_NAME);
 
     syscall_table_finder();
 
-    if(!hacked_syscall_tbl){
-        printk(KERN_INFO "%s: failed to find the sys_call_table\n",MOD_NAME);
+    if (!hacked_syscall_tbl) {
+        printk(KERN_INFO
+        "%s: failed to find the sys_call_table\n", MOD_NAME);
         return -1;
     }
 
-    AUDIT{
-        printk(KERN_INFO "%s: sys_call_table address %px\n",MOD_NAME,(void*)the_syscall_table);
-        printk(KERN_INFO "%s: initializing - hacked entries %d\n",MOD_NAME,HACKED_ENTRIES);
+    AUDIT {
+        printk(KERN_INFO
+        "%s: sys_call_table address %px\n", MOD_NAME, (void *) the_syscall_table);
+        printk(KERN_INFO
+        "%s: initializing - hacked entries %d\n", MOD_NAME, HACKED_ENTRIES);
     }
 
-    new_sys_call_array[0] = (unsigned long)sys_put_data;
-    new_sys_call_array[1] = (unsigned long)sys_get_data;
-    new_sys_call_array[2] = (unsigned long)sys_invalidate_data;
+    new_sys_call_array[0] = (unsigned long) sys_put_data;
+    new_sys_call_array[1] = (unsigned long) sys_get_data;
+    new_sys_call_array[2] = (unsigned long) sys_invalidate_data;
 
-    ret = get_entries(restore,HACKED_ENTRIES,(unsigned long*)the_syscall_table,&the_ni_syscall);
+    ret = get_entries(restore, HACKED_ENTRIES, (unsigned long *) the_syscall_table, &the_ni_syscall);
 
 
-    if (ret != HACKED_ENTRIES){
-        printk(KERN_INFO "%s: could not hack %d entries (just %d)\n",MOD_NAME,HACKED_ENTRIES,ret);
+    if (ret != HACKED_ENTRIES) {
+        printk(KERN_INFO
+        "%s: could not hack %d entries (just %d)\n", MOD_NAME, HACKED_ENTRIES, ret);
         return -1;
     }
 
     unprotect_memory();
 
-    for(i=0;i<HACKED_ENTRIES;i++){
-        ((unsigned long *)the_syscall_table)[restore[i]] = (unsigned long)new_sys_call_array[i];
+    for (i = 0; i < HACKED_ENTRIES; i++) {
+        ((unsigned long *) the_syscall_table)[restore[i]] = (unsigned long) new_sys_call_array[i];
     }
 
     protect_memory();
 
-    printk(KERN_INFO "%s: all new system-calls correctly installed on sys-call table\n",MOD_NAME);
+    printk(KERN_INFO
+    "%s: all new system-calls correctly installed on sys-call table\n", MOD_NAME);
 
 
 
@@ -217,7 +220,14 @@ static int singlefilefs_init(void) {
 
 static void singlefilefs_exit(void) {
 
-    int ret;
+    int ret, i;
+
+    unprotect_memory();
+    for(i=0;i<HACKED_ENTRIES;i++){
+        ((unsigned long *)the_syscall_table)[restore[i]] = the_ni_syscall;
+    }
+    protect_memory();
+    printk(KERN_INFO "%s: sys-call table restored to its original content\n",MOD_NAME);
 
     //unregister filesystem
     ret = unregister_filesystem(&onefilefs_type);

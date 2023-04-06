@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	// write file inode
 	file_inode.mode = S_IFREG;
 	file_inode.inode_no = SINGLEFILEFS_FILE_INODE_NUMBER;
-	file_inode.file_size = strlen(file_body);
+	file_inode.file_size = 0; //strlen(file_body);
 	printf("File size is %ld\n",file_inode.file_size);
 	fflush(stdout);
 	ret = write(fd, (char *)&file_inode, sizeof(file_inode));

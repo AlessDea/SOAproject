@@ -1002,7 +1002,14 @@ deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/file.o := \
     $(wildcard include/config/SLOB) \
     $(wildcard include/config/CC_IS_GCC) \
     $(wildcard include/config/CLANG_VERSION) \
+  include/linux/vmalloc.h \
+    $(wildcard include/config/HAVE_ARCH_HUGE_VMALLOC) \
+  arch/x86/include/asm/vmalloc.h \
+  arch/x86/include/asm/pgtable_areas.h \
   include/generated/uapi/linux/version.h \
+  include/linux/delay.h \
+  arch/x86/include/asm/delay.h \
+  include/asm-generic/delay.h \
   /home/alessandrodea/Scrivania/SOAproject_tmp/src/helper.h \
 
 /home/alessandrodea/Scrivania/SOAproject_tmp/src/file.o: $(deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/file.o)

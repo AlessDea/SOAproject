@@ -86,6 +86,7 @@ extern list dev_map; /* map of the device */
 #define list_init rcu_list_init
 #define list_first_free rcu_list_first_free
 #define list_next_valid rcu_list_next_valid
+#define list_first_valid rcu_list_get_first_valid
 
 void rcu_list_init(rcu_list * l);
 
@@ -99,6 +100,7 @@ long rcu_list_next_valid(rcu_list *l, long start_key);
 
 int rcu_list_first_free(rcu_list *l);
 
+long rcu_list_get_first_valid(rcu_list *l);
 
 /* ------------------------------------------------------------- */
 

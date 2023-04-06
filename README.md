@@ -64,3 +64,15 @@ La struttura è la seguente:
 
 ```
 
+### read syscall
+Questa syscall deve ritornare il contenuto del device file in ordine di arrivo dei messaggi. Solo i blocchi non invalidati però devono essere restituiti all'utente.
+Il problema è che se la lettura avviene ad un offset che cade su un blocco non valido?
+
+#### Soluzione:
+Devo considerare il file come la sequenza di messaggi validi, non devo quindi gestire questa operazione come se sia fata sul device.
+Questo implica che devo aggiornare la lunghezza del file ad ogni put data e ad ogni invalidate. Questo si fa andando a scrivere nel blocco 1 del device, nel campo size.
+Quindi devo scrivere una funzione che legge l'inode dalla cache, coe viene fatto in `onefilefs_lookup`.
+
+
+### N.B.
+> Bisogna gestire la concorrenza per le operazioni fatte sui blocchi per aggiornare la taglia dei file

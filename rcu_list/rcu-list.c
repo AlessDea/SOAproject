@@ -101,6 +101,27 @@ int rcu_list_first_free(rcu_list *l){
 
 }
 
+long rcu_list_get_first_valid(rcu_list *l){
+    unsigned long * epoch = &(l->epoch);
+    unsigned long my_epoch;
+    element *p;
+    int index;
+
+    my_epoch = __sync_fetch_and_add(epoch,1);
+
+    // arrive at start_key (the required one)
+    p = l->head->next;
+
+
+    index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
+    __sync_fetch_and_add(&l->standing[index],1);
+
+    if (p) return p->key;
+
+    return -1; //no valid blocks
+
+}
+
 
 
 
@@ -121,13 +142,8 @@ long rcu_list_next_valid(rcu_list *l, long start_key){
         p = p->next;
     }
 
-    // from start_key check the first valid
-    while (p!=NULL){
-        if ( p->validity == 1){
-            break;
-        }
-        p = p->next;
-    }
+    p = p->next;
+
 
     index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
     __sync_fetch_and_add(&l->standing[index],1);
@@ -227,7 +243,7 @@ int rcu_list_remove(rcu_list *l, long key){
 	printk(KERN_INFO "%s: deletion: waiting grace-full period (target value is %lu)\n",MOD_NAME, grace_period_threads);
 	while(l->standing[index] < grace_period_threads);
 	l->standing[index] = 0;
-    __sync_fetch_and_sub(&l->keys[key],1);
+
 
 
     write_unlock(&l->write_lock);

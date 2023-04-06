@@ -45,7 +45,36 @@
 #include "include/scth.h"
 #include "../src/helper.h"
 
+int update_file_size(int size){
+    struct inode *the_inode = NULL;
+    struct super_block *sb = my_bdev_sb;
+    struct buffer_head *bh = NULL;
+    struct onefilefs_inode *FS_specific_inode;
 
+
+
+    the_inode = iget_locked(sb, 1);
+    if (!the_inode)
+        return -ENOMEM;
+
+    //already cached inode - modify its size
+    if(!(the_inode->i_state & I_NEW)){
+        the_inode->i_size += size;
+    }
+
+    // now modify the size also on the specific inode stored in the second block of the device (for consistency)
+
+    bh = (struct buffer_head *)sb_bread(sb, SINGLEFILEFS_INODES_BLOCK_NUMBER );
+    if(!bh){
+        iput(the_inode);
+        return -EIO;
+    }
+    FS_specific_inode = (struct onefilefs_inode*)bh->b_data;
+    FS_specific_inode->file_size += size;
+    brelse(bh);
+
+    return 0;
+}
 
 #define AUDIT if(1)
 
@@ -79,8 +108,11 @@
 
     /* check if there is a free block available */
     off = list_first_free(&dev_map);
-    if(off < 0)
+    if(off < 0){
+        printk(KERN_INFO "%s: thread %d request for put_data sys_call: no free blocks available", MOD_NAME, current->pid);
         return -ENOMEM;
+    }
+
 
 
     /* perform the write in bh */
@@ -100,7 +132,7 @@
 
     memcpy(bh->b_data, (char *)blk, sizeof(struct block));
 
-    printk(KERN_INFO "%s: thread %d request for put_data sys_call .. wrote msg: %s\n",MOD_NAME,current->pid, ((struct block *)(bh->b_data))->data);
+    printk(KERN_INFO "%s: thread %d request for put_data sys_call .. wrote msg: %s (%ld) [metadata: %d]\n",MOD_NAME,current->pid, ((struct block *)(bh->b_data))->data, size, blk->metadata);
 
     mark_buffer_dirty(bh);
     brelse(bh);
@@ -111,6 +143,7 @@
         return -ENOMEM;
     }
 
+    update_file_size(size);
     printk(KERN_INFO "%s: thread %d request for put_data sys_call success\n",MOD_NAME,current->pid);
 
 
@@ -189,15 +222,16 @@
     // update the metadata of that block
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset);
     if(!bh){
-    return -EIO;
+        return -EIO;
     }
 
     blk = (struct block*)bh->b_data;
     blk->metadata = INVALIDATE(blk->metadata);
 
+    update_file_size(-(MSG_LEN(blk->metadata) + 1)); // +1 is for the \n thai is logically used for the division of the messages
+
     mark_buffer_dirty(bh);
     brelse(bh);
-
 
     printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call success\n",MOD_NAME,current->pid);
 

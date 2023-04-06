@@ -6,13 +6,15 @@
 #include <linux/buffer_head.h>
 #include <linux/types.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/string.h>
 #include <linux/version.h>
+#include <linux/delay.h>
+
 
 
 //#include "singlefilefs.h"
 #include "helper.h"
-
 
 
 ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *off) {
@@ -23,84 +25,104 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     int ret;
     long block_to_read;//index of the block to be read from device
     struct block *msg;
-    size_t rem;
+    char *buffer, *tmp;
+    short msg_len;
+    size_t tmp_len;
+    //loff_t start_off;
+    long read;
 
+    read = 0;
 
     printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
 
     //this operation is not synchronized
     //*off can be changed concurrently
     //add synchronization if you need it for any reason
-
     //check that *off is within boundaries
-    /*if (*off >= file_size)
-        return 0;
-    else if (*off + len > file_size)
-        len = file_size - *off;*/
-
-    // la seguente è un test per verificare se funziona. In teoria bisogna far si che venga aggiornato
-    // il file_size, ovvero filp->the_inode->i_size ad ogni scrittura del file
-
     if(*off < 0) return 0;
 
-    if(*off > BLOCK_SSIZE*NBLOCKS){
-        // out of bundaries
+    if (*off > file_size)
         return 0;
-    }else if(*off + len > BLOCK_SSIZE*NBLOCKS){
-        len = BLOCK_SSIZE*NBLOCKS - *off;
-    }else
+    else if ((*off + len) > file_size)
+        len = file_size - *off;
 
-    // now check if len is the block size boundary
-    if(len > BLOCK_SSIZE){
-        rem = len - BLOCK_SSIZE;
-    }else{
-        rem = len;
+    //start_off = *off % BLOCK_SSIZE;
+
+    printk(KERN_INFO "%s: read operation in boundaries (len = %ld)",MOD_NAME, len);
+    // now prepare a buffer that will contain the messages
+    buffer = kzalloc(MSG_MAX_SIZE, GFP_KERNEL);
+    if(buffer == NULL)
+        printk(KERN_INFO "%s: buffer allocation error",MOD_NAME);
+
+
+
+// TODO: get a lock on the device
+
+    tmp_len = len;
+    /* read until there are not remaining bytes */
+    block_to_read = list_first_valid(&dev_map); // get the first valid block in according to message arrive order
+    //block_to_read = list_is_valid(&dev_map, BLK_INDX(*off));
+    if(block_to_read == -1){
+        //no valid block
+        printk(KERN_INFO "%s: read operation error no valid blocks", MOD_NAME);
+        return 0;
+    }
+    while(tmp_len > 0 && block_to_read >= 0){
+        block_to_read += 2; //the value 2 accounts for superblock and file-inode on device
+
+        printk(KERN_INFO "%s: read operation must access block %ld of the device", MOD_NAME, block_to_read);
+
+        bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
+        if(!bh){
+            return -EIO;
+        }
+
+        msg = (struct block *)bh->b_data;
+        msg_len = MSG_LEN(msg->metadata);
+
+        printk(KERN_INFO "%s: read operation of message: %s", MOD_NAME, msg->data);
+
+
+        tmp = kmalloc(msg_len + 1, GFP_KERNEL);
+        if(!tmp){
+            printk("%s: kmalloc error, unable to allocate memory for read messages as single file\n", MOD_NAME);
+            return 0;
+        }
+
+        strncpy(tmp, msg->data, msg_len);
+        tmp[msg_len] = '\n';
+        //memcpy(buffer, (msg->data + sizeof(char)*start_off), msg_len - start_off -1); //-1 to not to count the terminator
+
+        /* memcpy(tmp, msg->data, msg_len - 1); //-1 to not to get the terminator
+        buffer[msg_len-1] = '\n';
+        brelse(bh);*/
+
+        brelse(bh);
+
+        ret = copy_to_user(buf + read, tmp, msg_len+1);
+
+        printk(KERN_INFO "%s: copy success (%d)", MOD_NAME, ret);
+
+        read += (msg_len + 1 - ret);
+
+        tmp_len -= (msg_len - 1);
+//        start_off = 0;
+
+        block_to_read = list_next_valid(&dev_map, block_to_read - 2);
+        printk(KERN_INFO "%s: next block to read: %ld", MOD_NAME, block_to_read);
+        printk(KERN_INFO "%s: tmp_len %ld", MOD_NAME, tmp_len);
+
+        kfree(tmp);
+
     }
 
+    // TODO: release lock
 
-    block_to_read = BLK_INDX(*off);
+    //ret = copy_to_user(buf, buffer, len);
 
+    *off += read;
 
-    // determine if the block is valid
-    if(!list_is_valid(&dev_map, BLK_INDX(*off)))
-        block_to_read = list_next_valid(&dev_map, BLK_INDX(*off));
-
-    if(block_to_read == -1)
-        return 0; // no data available
-
-
-
-    //determine the block level offset for the operation (the offset in the block)
-    // TODO: the read operation must must be done from the offset specified and if size goes out the block's boundary then read at next block the remaining bytes
-    //offset = *off % DEFAULT_BLOCK_SIZE;
-
-
-    /*//just read stuff in a single block - residuals will be managed at the applicatin level
-    if (offset + len > DEFAULT_BLOCK_SIZE)
-        len = DEFAULT_BLOCK_SIZE - offset;
-*/
-    //compute the actual index of the the block to be read from device
-    block_to_read += 2; //the value 2 accounts for superblock and file-inode on device
-
-    printk(KERN_INFO "%s: read operation must access block %ld of the device", MOD_NAME, block_to_read);
-
-    bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
-    if(!bh){
-	    return -EIO;
-    }
-    //ret = copy_to_user(buf, (bh->b_data + offset), len);
-
-    msg = (struct block *)bh->b_data;
-
-    if(rem > MSG_LEN(msg->metadata))
-        rem = MSG_LEN(msg->metadata);
-
-    ret = copy_to_user(buf, msg->data, rem);
-
-    *off += (rem - ret);
-    brelse(bh);
-
-    return rem - ret;
+    return len - ret;
 
 }
 

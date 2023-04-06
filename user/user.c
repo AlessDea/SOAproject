@@ -2,13 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #define PUT_DATA        134
 #define GET_DATA	   	174
 #define INVALIDATE_DATA 177
 
 int main(void){
-    int cmd, ret;
+    int cmd, ret, fd;
     char *msg;
 
 
@@ -16,7 +17,7 @@ int main(void){
     int offset;
 
 
-    printf("0: put_data\n1: get_data\n2: invalidate_data\n3: exit\n");
+    printf("0: put_data\n1: get_data\n2: invalidate_data\n3: read\n4: exit\n");
 
     while(1) {
         printf("Insert a command: ");
@@ -29,7 +30,6 @@ int main(void){
                     printf("malloc error\n");
                     return -1;
                 }
-
 
                 getc(stdin); //consume newline
 
@@ -80,8 +80,29 @@ int main(void){
                     return -1;
                 }
                 break;
-
             case 3:
+
+                printf("Insert the len of message to read: ");
+                scanf("%ld", &size);
+
+                fd = open("../src/mount/singlefile", O_RDONLY);
+                if(fd == -1)
+                {
+                    printf("open error\n");
+                    break;
+                }
+
+                msg = (char *) malloc(sizeof(char) * (size + 1));
+                if (msg == NULL) {
+                    printf("malloc error\n");
+                    return -1;
+                }
+
+                ret = read(fd, msg, size);
+                printf("read %d bytes, the message is: %s\n", ret, msg);
+
+                break;
+            case 4:
                 return 0;
         }
     }
