@@ -127,11 +127,12 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     ret = mount_bdev(fs_type, flags, dev_name, data, singlefilefs_fill_super);
 
-    if (unlikely(IS_ERR(ret)))
-        printk(KERN_INFO "%s: error mounting onefilefs",MOD_NAME);
-    else
-        printk(KERN_INFO "%s: singlefilefs is succesfully mounted on from device %s\n",MOD_NAME,dev_name);
-
+    if (unlikely(IS_ERR(ret))) {
+        printk(KERN_INFO "%s: error mounting onefilefs", MOD_NAME);
+        return ret;
+    }else {
+        printk(KERN_INFO "%s: singlefilefs is succesfully mounted on from device %s\n", MOD_NAME, dev_name);
+    }
 
     /* create the map of the device */
     list_init(&dev_map);

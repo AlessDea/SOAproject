@@ -102,7 +102,7 @@ int update_file_size(int size){
      * */
 
     /* check if size is less-equal of the block size */
-    if(size > MSG_MAX_SIZE)
+    if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
         return -ENOMEM;
 
 
@@ -143,7 +143,10 @@ int update_file_size(int size){
         return -ENOMEM;
     }
 
-    update_file_size(size);
+    //+1 for the null terminator which become a \n in the read operation
+    //when a read is performed, with cat for example, the buffer has len as the file, so we need
+    //space for the \n for each message
+    update_file_size(size+1);
     printk(KERN_INFO "%s: thread %d request for put_data sys_call success\n",MOD_NAME,current->pid);
 
 

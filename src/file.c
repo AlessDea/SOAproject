@@ -33,6 +33,12 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
     read = 0;
 
+    //check if the device is mounted
+    if(&dev_map == NULL){
+        //device is not mounted
+        return -ENODEV;
+    }
+
     printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
 
     //this operation is not synchronized
@@ -49,11 +55,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //start_off = *off % BLOCK_SSIZE;
 
     printk(KERN_INFO "%s: read operation in boundaries (len = %ld)",MOD_NAME, len);
-    // now prepare a buffer that will contain the messages
-    buffer = kzalloc(MSG_MAX_SIZE, GFP_KERNEL);
-    if(buffer == NULL)
-        printk(KERN_INFO "%s: buffer allocation error",MOD_NAME);
-
 
 
 // TODO: get a lock on the device
@@ -78,34 +79,31 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         }
 
         msg = (struct block *)bh->b_data;
-        msg_len = MSG_LEN(msg->metadata);
+        msg_len = MSG_LEN(msg->metadata); //contains +1 for the null terminator
 
         printk(KERN_INFO "%s: read operation of message: %s", MOD_NAME, msg->data);
 
 
-        tmp = kmalloc(msg_len + 1, GFP_KERNEL);
+        tmp = kmalloc(msg_len, GFP_KERNEL);
         if(!tmp){
             printk("%s: kmalloc error, unable to allocate memory for read messages as single file\n", MOD_NAME);
             return 0;
         }
 
-        strncpy(tmp, msg->data, msg_len);
-        tmp[msg_len] = '\n';
-        //memcpy(buffer, (msg->data + sizeof(char)*start_off), msg_len - start_off -1); //-1 to not to count the terminator
+        memcpy(tmp, msg->data, msg_len - 1); //-1 to not to count the terminator
+        tmp[msg_len - 1] = '\n';
+        printk(KERN_INFO "%s: tmp %s", MOD_NAME, tmp);
 
-        /* memcpy(tmp, msg->data, msg_len - 1); //-1 to not to get the terminator
-        buffer[msg_len-1] = '\n';
-        brelse(bh);*/
 
         brelse(bh);
 
-        ret = copy_to_user(buf + read, tmp, msg_len+1);
+        ret = copy_to_user(buf + read, tmp, msg_len);
 
         printk(KERN_INFO "%s: copy success (%d)", MOD_NAME, ret);
 
-        read += (msg_len + 1 - ret);
+        read += (msg_len - ret);
 
-        tmp_len -= (msg_len - 1);
+        tmp_len -= (msg_len);
 //        start_off = 0;
 
         block_to_read = list_next_valid(&dev_map, block_to_read - 2);
@@ -120,9 +118,11 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
     //ret = copy_to_user(buf, buffer, len);
 
+    //ret = copy_to_user(buf + read + 1, '\0', msg_len);
+
     *off += read;
 
-    return len - ret;
+    return len;
 
 }
 
