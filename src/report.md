@@ -83,13 +83,14 @@ When the entries are found, then the new syscall are inserted in the syscall tab
 Then the file system is registered.
 
 #### singlefilefs_mount
-This function in invocated on the file system mounting. It's goal is to set up the file system and this is done thanks to 
-the `mount_bdev` funciton. This function takes some arguments and one of this is  a function pointer which specify the function
+This function is invoked on the file system mounting. It's goal is to set up the file system and this is done thanks to 
+the `mount_bdev` function. This function takes some arguments and one of this is  a function pointer which specify the function
 that is in charge to fill the superblock. This function is `singlefilefs_fill_super`.
 
 
 ### newsyscall.c
 There is the implementation of the three new syscall.
+
 #### sys_put_data
 This is the first syscall, it's goal is to put user message in a free block of the device. The steps operated by this syscall:
 - check if the user message fits the block
