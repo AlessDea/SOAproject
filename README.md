@@ -76,3 +76,18 @@ Quindi devo scrivere una funzione che legge l'inode dalla cache, coe viene fatto
 
 ### N.B.
 > Bisogna gestire la concorrenza per le operazioni fatte sui blocchi per aggiornare la taglia dei file
+
+
+# Modifiche da fare
+1. nel make file inserire un'opzione che permetta di non inizializzare `image`, in modo che il device sia persistente. Infatti la prima volta viene fatto:
+```Makefile
+create-fs:
+	dd bs=4096 count=$(NBLOCKS) if=/dev/zero of=image
+	./singlefilemakefs image
+	mkdir mount
+```
+Ma se lo si vuole persistente, ovvero ai prossimi mount si vuole ritrovare il contenuto precedente, allora le prime due righe vanno eliminate in modo da non sovrascrivere il device.
+In particolare bisogna fare in modo che create-fs venga chiamato solamente se il silesystem non esiste. In caso non esista bisogna solo far `mount-fs` e a questo punto nel mount bisogna fare dei passaggi 
+di controllo per leggere le informazioni sul block device che erano state memorizzate in precedenza.
+
+Per verificare che il filesystem esista basta verificare che il module `singlefilefs` sia caricato.

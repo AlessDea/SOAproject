@@ -95,7 +95,7 @@ int update_file_size(int size){
 
     printk(KERN_INFO "%s: thread %d requests a put_data sys_call\n",MOD_NAME,current->pid);
 
-    /* the operation must be done all or nothing so if there is no enoug space returns ENOMEM.
+    /* the operation must be done all or nothing so if there is no enough space returns ENOMEM.
      * Two things must be checked:
      * - the user message fits in the block (size <= MSG_MAX_SIZE)
      * - there is a free block
@@ -112,7 +112,6 @@ int update_file_size(int size){
         printk(KERN_INFO "%s: thread %d request for put_data sys_call: no free blocks available", MOD_NAME, current->pid);
         return -ENOMEM;
     }
-
 
 
     /* perform the write in bh */
