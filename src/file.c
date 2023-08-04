@@ -126,6 +126,14 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
 }
 
+/* the write operation must do nothing so it's implementation it's dummy, I need it just for reject the write request */
+ssize_t exer_write(struct file *pfile, const char __user *buffer, size_t length, loff_t *offset) {
+
+    printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
+
+    //make sure the write operation returns a error value
+    return -1; 
+}   
 
 struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child_dentry, unsigned int flags) {
 
@@ -186,6 +194,23 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
 
 }
 
+
+
+ssize_t onefilefs_open(struct inode *pinode, struct file *pfile) {
+
+    printk(KERN_INFO "%s: open operation called",MOD_NAME);
+
+    return 0;
+}
+
+ssize_t onefilefs_release(struct inode *pinode, struct file *pfile) {
+
+    printk(KERN_INFO "%s: release operation called",MOD_NAME);
+
+    return 0;
+}
+
+
 //look up goes in the inode operations
 const struct inode_operations onefilefs_inode_ops = {
     .lookup = onefilefs_lookup,
@@ -195,4 +220,6 @@ const struct file_operations onefilefs_file_operations = {
     .owner = THIS_MODULE,
     .read = onefilefs_read,
     //.write = onefilefs_write //please implement this function to complete the exercise
+    .open = onefilefs_open,
+    .release = onefilefs_release,
 };
