@@ -13,6 +13,12 @@
 #include "singlefilefs.h"
 
 
+
+int retrieve_dev_content(int fd){
+
+}
+
+
 /*
 	This makefs will write the following information onto the disk
 	- BLOCK 0, superblock;
