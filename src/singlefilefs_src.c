@@ -54,7 +54,7 @@ int singlefilefs_fill_super(struct super_block *sb, void *data, int silent) {
     sb->s_magic = MAGIC;
 
     bh = sb_bread(sb, SB_BLOCK_NUMBER);
-    if(!sb){
+    if(!bh){
 	    return -EIO;
     }
     sb_disk = (struct onefilefs_sb_info *)bh->b_data;
@@ -113,6 +113,22 @@ int singlefilefs_fill_super(struct super_block *sb, void *data, int silent) {
 
 
 static void singlefilefs_kill_superblock(struct super_block *s) {
+    // write last_key in the superblock
+    struct buffer_head *bh;
+    struct onefilefs_sb_info *sb_disk;
+
+    bh = sb_bread(s, SB_BLOCK_NUMBER);
+    if(!bh){
+	    return;
+    }
+    sb_disk = (struct onefilefs_sb_info *)bh->b_data;
+    sb_disk->last_key = dev_map.last;
+
+    printk("%s: last key was %lld\n",MOD_NAME,sb_disk->last_key);
+    
+    mark_buffer_dirty(bh);
+    brelse(bh);
+
     kill_block_super(s);
     printk(KERN_INFO "%s: singlefilefs unmount succesful.\n",MOD_NAME);
     return;
@@ -124,8 +140,16 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     struct dentry *ret;
     element *rcu_head;
+    int last_k;
+    struct onefilefs_sb_info *sb;
+    struct buffer_head *bh;
+
+
+    printk(KERN_INFO "%s: mounting", MOD_NAME);
 
     ret = mount_bdev(fs_type, flags, dev_name, data, singlefilefs_fill_super);
+
+    printk(KERN_INFO "%s: mounted", MOD_NAME);
 
     if (unlikely(IS_ERR(ret))) {
         printk(KERN_INFO "%s: error mounting onefilefs", MOD_NAME);
@@ -134,7 +158,8 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
         printk(KERN_INFO "%s: singlefilefs is succesfully mounted on from device %s\n", MOD_NAME, dev_name);
     }
 
-    /* create the map of the device */
+
+    /* create the map of the empty device */
     list_init(&dev_map);
     // insert the head
     rcu_head = kmalloc(sizeof(element), GFP_KERNEL);
@@ -143,6 +168,28 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     rcu_head->next = NULL;
     dev_map.head = rcu_head;
 
+    /* check if in the device there is already valid blocks, in case retrieve them and create the map */
+    // read the sb (block 0) then retrieve the last_key field
+    // get the buffer_head
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, 0);
+    if(!bh){
+        return NULL;
+    }
+
+    sb = (struct onefilefs_sb_info*)bh->b_data;
+
+    last_k = sb->last_key;
+    // mark_buffer_dirty(bh);
+    // brelse(bh);
+
+    if(last_k > -1){
+        dev_map.last = last_k;
+        list_reload(&dev_map);
+        printk(KERN_INFO "%s: the device was found written: starting up with old (last key %d)\n", MOD_NAME, dev_map.last);
+    }else{
+        dev_map.last = -1; //-1 indicates that the device is virgin
+        printk(KERN_INFO "%s: the device was found virgin: starting up with fresh data\n", MOD_NAME);
+    }
 
     return ret;
 }
@@ -222,6 +269,8 @@ static int singlefilefs_init(void) {
 static void singlefilefs_exit(void) {
 
     int ret, i;
+
+    list_free(&dev_map);
 
     unprotect_memory();
     for(i=0;i<HACKED_ENTRIES;i++){

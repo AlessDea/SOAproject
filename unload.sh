@@ -6,25 +6,24 @@ ENDCOLOR="\e[0m"
 
 
 
-function helper(){
+helper(){
     echo "USAGE: unload.sh [OPTION]"
-    echo "  -r: umount"
-    echo "  -u: rmmod"
+    echo "  -u: umount"
+    echo "  -r: rmmod"
     echo "  -a: umount and rmmod"
     return
 }
 
-function unmount(){
-    echo -e "${RED}unmounting fs${ENDCOLOR}"
+unmount(){
+    printf "${RED}unmounting fs${ENDCOLOR}\n"
     sudo umount src/mount
     sudo rm -r src/mount
     return
 }
 
-function rmmodule(){
-    echo -e "${RED}removing module${ENDCOLOR}"
+rmmodule(){
+    printf "${RED}removing module${ENDCOLOR}\n"
     sudo rmmod singlefilefs
-    sudo rm -r src/mount
     return
 }
 
@@ -36,14 +35,14 @@ do
         a) unmount
             rmmodule;;
         h) helper;;
-        *) echo -e "${RED}Not a valid option${ENDCOLOR}"
+        *) printf "${RED}Not a valid option${ENDCOLOR}\n"
             helper;;
     esac
 done
 
 if [ $OPTIND -eq 1 ]; 
 then 
-    echo -e "${RED}No options were passed, going to perform both umount and rmmod${ENDCOLOR}"
-    umount
+    printf "${RED}No options were passed, going to perform both umount and rmmod${ENDCOLOR}\n"
+    unmount
     rmmodule
 fi

@@ -1,3 +1,9 @@
 {
-    "makefile.makeDirectory": "/src"
+    "makefile.makeDirectory": "/src",
+    "files.associations": {
+        "string_view": "c",
+        "compare": "c",
+        "signal.h": "c",
+        "module.h": "c"
+    }
 }

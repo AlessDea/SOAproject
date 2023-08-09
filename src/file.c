@@ -25,7 +25,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     int ret;
     long block_to_read;//index of the block to be read from device
     struct block *msg;
-    char *buffer, *tmp;
+    char *tmp;
     short msg_len;
     size_t tmp_len;
     //loff_t start_off;
@@ -128,8 +128,10 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
 /* the write operation must do nothing so it's implementation it's dummy, I need it just for reject the write request */
 ssize_t onefilefs_write(struct file *pfile, const char __user *buffer, size_t length, loff_t *offset) {
+    struct inode * the_inode = pfile->f_inode;
+    uint64_t file_size = the_inode->i_size;
 
-    printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
+    printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, length, *offset, file_size);
 
     //set the offset to 0 again (?)
     *offset = 0;
@@ -201,14 +203,14 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
 
 
 
-ssize_t onefilefs_open(struct inode *pinode, struct file *pfile) {
+int onefilefs_open(struct inode *pinode, struct file *pfile) {
 
     printk(KERN_INFO "%s: open operation called",MOD_NAME);
 
     return 0;
 }
 
-ssize_t onefilefs_release(struct inode *pinode, struct file *pfile) {
+int onefilefs_release(struct inode *pinode, struct file *pfile) {
 
     printk(KERN_INFO "%s: release operation called",MOD_NAME);
 
@@ -224,7 +226,7 @@ const struct inode_operations onefilefs_inode_ops = {
 const struct file_operations onefilefs_file_operations = {
     .owner = THIS_MODULE,
     .read = onefilefs_read,
-    .write = onefilefs_write //please implement this function to complete the exercise
+    .write = onefilefs_write, //please implement this function to complete the exercise
     .open = onefilefs_open,
     .release = onefilefs_release,
 };

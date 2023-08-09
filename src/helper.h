@@ -28,16 +28,20 @@
 
 #define CLEAN_META 0x0000
 #define VALID_MASK 0x8000
+#define CHCECK_V_MASK 0xffff
 
 #define MSG_LEN(md) (md & ~VALID_MASK)
 
 #define INVALIDATE(md) (md & CLEAN_META)
+
+#define IS_VALID(md) (md | ~VALID_MASK)
 
 
 /* the struct of each block */
 struct block{
     short metadata;
     char data[MSG_MAX_SIZE];
+    int prev; //next block according to the order of the delivery of data
 };
 
 
@@ -71,8 +75,9 @@ typedef struct rcu_list{
     unsigned long epoch; //a different cache line for this can also help
     int next_epoch_index;
     rwlock_t write_lock;
-    int keys[NBLOCKS];
+    int keys[NBLOCKS]; //used to mantain block validity (1)
     element * head;
+    int last; //last valid written block
 } __attribute__((packed)) rcu_list;
 
 typedef rcu_list list __attribute__((aligned(64)));
@@ -87,6 +92,9 @@ extern list dev_map; /* map of the device */
 #define list_first_free rcu_list_first_free
 #define list_next_valid rcu_list_next_valid
 #define list_first_valid rcu_list_get_first_valid
+#define list_reload rcu_list_reload
+#define list_free rcu_list_free
+
 
 void rcu_list_init(rcu_list * l);
 
@@ -101,6 +109,11 @@ long rcu_list_next_valid(rcu_list *l, long start_key);
 int rcu_list_first_free(rcu_list *l);
 
 long rcu_list_get_first_valid(rcu_list *l);
+
+int rcu_list_reload(rcu_list *l);
+
+void rcu_list_free(rcu_list *l);
+
 
 /* ------------------------------------------------------------- */
 
@@ -151,7 +164,7 @@ struct onefilefs_sb_info {
     uint64_t magic;
     uint64_t block_size;
     uint64_t inodes_count;//not exploited
-    uint64_t free_blocks;//not exploited
+    uint64_t last_key;
 
     //padding to fit into a single block
     char padding[ (4 * 1024) - (5 * sizeof(uint64_t))];

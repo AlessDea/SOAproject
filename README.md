@@ -32,7 +32,7 @@ Creazione:
 - bisogna solo creare quanti blocchi si necessitano e gestire la logica di lettura di essi.
 Syscall:
 - bisogna creare le syscall ed inserirle nella syscall table con il modulo del Prof
-- come fa la syscall a prendere le informazioni del device? devo far si che siano visibili ad esse
+
 
 
 Mappa del device: c'è bisogno di una mappa che tenga traccia dei blocchi validi e non. Inoltre c'è bisogno di mantenere l'ordine temporale dei messaggi:.
@@ -94,3 +94,5 @@ Per verificare che il filesystem esista basta verificare che il module `singlefi
 
 
 2. create-fs deve essere chiamato solo la prima volta che viene creato il device driver, poichè nelle altre circostanze esiste già il device driver e si vuole probabilmente continuare con quello. In caso chiedere all'utente
+
+3. funzione che al riavvio ricostruisce la rcu list dal device se questo non è stato ripristinato

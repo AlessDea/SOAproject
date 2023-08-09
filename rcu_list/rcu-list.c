@@ -4,11 +4,56 @@
 #include <linux/sched.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
+#include <linux/buffer_head.h>
+#include <linux/wait.h>
+#include <linux/signal.h>
+#include <linux/mm.h>
+#include <linux/moduleparam.h>
+#include <linux/module.h>
 
 
 #include "../src/helper.h"
 
+#define SCALING (1000)  // please thake this value from CONFIG_HZ in your kernel config file 
+
+static int shutdown_daemon = 0;// this can be configured at run time via the sys file system - 1 lead to daemon thread shutdown 
+module_param(shutdown_daemon,int,0660);
+
+static int sleep_enabled = 1;// this can be configured at run time via the sys file system 
+module_param(sleep_enabled,int,0660);
+
+static int timeout = 1;// this can be configured at run time via the sys file system 
+module_param(timeout,int,0660);
+
+
 int house_keeper(void * the_list);
+
+void rcu_list_free(rcu_list * l){
+	element *p, *tmp;
+
+	//stop the house keeper kernel thread
+	shutdown_daemon = 1;
+
+	printk("%s: kernel thread deamon knows to shutdown\n", MOD_NAME);
+
+	write_lock(&(l->write_lock));
+
+	p = l->head;
+	while(p != NULL){
+		tmp = p->next;
+		kfree(p);
+		p = tmp;
+	}
+
+	write_unlock(&(l->write_lock));
+
+	kfree(l);
+
+	printk("%s: rcu-list freed\n", MOD_NAME);
+
+
+
+}
 
 void rcu_list_init(rcu_list * l){
 
@@ -27,13 +72,86 @@ void rcu_list_init(rcu_list * l){
 	//pthread_spin_init(&l->write_lock,PTHREAD_PROCESS_PRIVATE);
     rwlock_init(&(l->write_lock));
 
+
     ts = kthread_run(house_keeper, (void *)&dev_map, "house-keeper-deamon");
     if (ts == NULL){//this thread can be activated
                                     //using some different solution
             printk(KERN_INFO "%s: application startup error - RCU-list house-keeper not activated\n", MOD_NAME);
-    };
+			wake_up_process(ts);
+	}else{
+		
+		module_put(THIS_MODULE);
+	}
+
 
 }
+
+
+int rcu_list_reload(rcu_list * l){
+
+    struct task_struct *ts;
+
+	struct buffer_head *bh;
+	struct block *blk;
+
+	int lk; //last's key
+
+	element *p, *next;
+
+
+	lk = l->last;
+	next = NULL;
+
+	do{
+
+		// get the buffer_head
+		bh = (struct buffer_head *)sb_bread(my_bdev_sb, 2 + lk);
+		if(!bh){
+			return -EIO;
+		}
+
+		blk = (struct block*)bh->b_data;
+
+		// check if the block is valid
+		// if the block is valid get the next field and go to that block
+		if(IS_VALID(blk->metadata) == CHCECK_V_MASK){ // this check is useless if all the update logic of the blocks has been implemented in the right way
+			//the block is valid
+			p = kmalloc(sizeof(element), GFP_KERNEL);
+
+			if(!p) return 0;
+
+			p->key = lk;
+			p->next = next;
+			p->validity = 1;
+
+			next = p;
+
+			printk("%s: reloaded block %ld informations\n", MOD_NAME, p->key);
+
+		}
+
+		lk = blk->prev;
+			
+	}while (lk != -1);
+		
+	brelse(bh);
+
+	l->head->next = next;
+
+	ts = kthread_run(house_keeper, (void *)&dev_map, "house-keeper-deamon");
+    if (ts == NULL){//this thread can be activated
+                                    //using some different solution
+            printk(KERN_INFO "%s: application startup error - RCU-list house-keeper not activated\n", MOD_NAME);
+			wake_up_process(ts);
+	}else{
+		
+		module_put(THIS_MODULE);
+	}
+
+	return 0;
+
+}
+
 
 int rcu_list_is_valid(rcu_list *l, long key){
 
@@ -172,6 +290,11 @@ int rcu_list_insert(rcu_list *l, long key){
 
     write_lock(&(l->write_lock));
 
+	l->last = key;
+	AUDIT
+	printk("%s: last key update: %ld\n", MOD_NAME, key);
+
+
     //traverse and insert
     tmp = l->head;
     while(tmp->next != NULL){
@@ -182,8 +305,8 @@ int rcu_list_insert(rcu_list *l, long key){
 	tmp->next = p;
 	asm volatile("mfence");
 
-	AUDIT
 	while(p){
+		AUDIT
 		printk(KERN_INFO "%s: elem %ld\n", MOD_NAME, p->key);
 		p = p->next;
 	}
@@ -212,6 +335,7 @@ int rcu_list_remove(rcu_list *l, long key){
 	//traverse and delete
 	p = l->head;
 
+	//check if it's the head to be removed
 	if(p != NULL && p->key == key){
 		removed = p;
 		l->head = removed->next;
@@ -220,9 +344,13 @@ int rcu_list_remove(rcu_list *l, long key){
 	else{
 		while(p != NULL){
 			if ( p->next != NULL && p->next->key == key){
+				if(p->next->next == NULL){ //if it is the last block then update field 'last'
+					l->last = p->key; 
+				}
                 __sync_fetch_and_sub(&l->keys[key], 1); // atomic block free key for new use
 				removed = p->next;
 				p->next = p->next->next;
+
 				asm volatile("mfence");//make it visible to readers
 				break;
 			}	
@@ -259,7 +387,6 @@ int rcu_list_remove(rcu_list *l, long key){
 
 
 int house_keeper(void * the_list){
-
 	unsigned long last_epoch;
 	unsigned long updated_epoch;
 	unsigned long grace_period_threads;
@@ -267,8 +394,31 @@ int house_keeper(void * the_list){
 
 	rcu_list * l = (rcu_list*) the_list;
 
+	DECLARE_WAIT_QUEUE_HEAD(my_sleep_queue);
+
+	allow_signal(SIGKILL);
+	allow_signal(SIGTERM);
+
+	
+
 redo:
-	msleep(PERIOD*1000); //*1000 is for have 2 seconds
+
+	if(shutdown_daemon){
+		printk(KERN_INFO "%s: deamon thread (pid = %d) - ending execution\n", MOD_NAME, current->pid);
+		module_put(THIS_MODULE);
+		return 0;
+	}
+
+	wait_event_interruptible_timeout(my_sleep_queue,!sleep_enabled,timeout*SCALING);
+
+	if(signal_pending(current)){
+		printk(KERN_INFO "%s: deamon thread (pid = %d) - killed\n",MOD_NAME,current->pid);
+		module_put(THIS_MODULE);
+		return -1;
+	
+	}
+
+	//msleep(PERIOD*1000); //*1000 is 2 seconds
 
     write_lock(&l->write_lock);
 	

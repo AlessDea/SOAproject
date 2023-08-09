@@ -3,6 +3,7 @@ cmd_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o := g
 source_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o := /home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.c
 
 deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o := \
+    $(wildcard include/config/HZ) \
   include/linux/compiler-version.h \
     $(wildcard include/config/CC_VERSION_TEXT) \
   include/linux/kconfig.h \
@@ -141,7 +142,6 @@ deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o := 
   include/uapi/linux/param.h \
   arch/x86/include/generated/uapi/asm/param.h \
   include/asm-generic/param.h \
-    $(wildcard include/config/HZ) \
   include/uapi/asm-generic/param.h \
   include/linux/spinlock_types.h \
     $(wildcard include/config/PREEMPT_RT) \
@@ -747,7 +747,7 @@ deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o := 
   include/linux/delay.h \
   arch/x86/include/asm/delay.h \
   include/asm-generic/delay.h \
-  /home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/../src/helper.h \
+  include/linux/buffer_head.h \
   include/linux/fs.h \
     $(wildcard include/config/READ_ONLY_THP_FOR_FS) \
     $(wildcard include/config/FS_POSIX_ACL) \
@@ -858,6 +858,155 @@ deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o := 
   include/linux/projid.h \
   include/uapi/linux/quota.h \
   include/linux/nfs_fs_i.h \
+  include/linux/pagemap.h \
+  include/linux/mm.h \
+    $(wildcard include/config/HAVE_ARCH_MMAP_RND_BITS) \
+    $(wildcard include/config/HAVE_ARCH_MMAP_RND_COMPAT_BITS) \
+    $(wildcard include/config/DEBUG_INFO_BTF) \
+    $(wildcard include/config/ARCH_USES_HIGH_VMA_FLAGS) \
+    $(wildcard include/config/ARCH_HAS_PKEYS) \
+    $(wildcard include/config/PPC) \
+    $(wildcard include/config/PARISC) \
+    $(wildcard include/config/IA64) \
+    $(wildcard include/config/SPARC64) \
+    $(wildcard include/config/ARM64) \
+    $(wildcard include/config/ARM64_MTE) \
+    $(wildcard include/config/HAVE_ARCH_USERFAULTFD_MINOR) \
+    $(wildcard include/config/SHMEM) \
+    $(wildcard include/config/DEV_PAGEMAP_OPS) \
+    $(wildcard include/config/DEVICE_PRIVATE) \
+    $(wildcard include/config/PCI_P2PDMA) \
+    $(wildcard include/config/ARCH_HAS_PTE_SPECIAL) \
+    $(wildcard include/config/ARCH_HAS_PTE_DEVMAP) \
+    $(wildcard include/config/DEBUG_VM_RB) \
+    $(wildcard include/config/PAGE_POISONING) \
+    $(wildcard include/config/INIT_ON_ALLOC_DEFAULT_ON) \
+    $(wildcard include/config/INIT_ON_FREE_DEFAULT_ON) \
+    $(wildcard include/config/DEBUG_PAGEALLOC) \
+    $(wildcard include/config/HUGETLBFS) \
+    $(wildcard include/config/MAPPING_DIRTY_HELPERS) \
+  include/linux/mmap_lock.h \
+  include/linux/page_ext.h \
+  include/linux/stacktrace.h \
+    $(wildcard include/config/STACKTRACE) \
+    $(wildcard include/config/ARCH_STACKWALK) \
+    $(wildcard include/config/HAVE_RELIABLE_STACKTRACE) \
+  include/linux/stackdepot.h \
+    $(wildcard include/config/STACKDEPOT) \
+  include/linux/page_ref.h \
+    $(wildcard include/config/DEBUG_PAGE_REF) \
+  include/linux/memremap.h \
+  include/linux/ioport.h \
+  include/linux/sizes.h \
+  include/linux/pgtable.h \
+    $(wildcard include/config/HIGHPTE) \
+    $(wildcard include/config/GUP_GET_PTE_LOW_HIGH) \
+    $(wildcard include/config/HAVE_ARCH_TRANSPARENT_HUGEPAGE_PUD) \
+    $(wildcard include/config/HAVE_ARCH_SOFT_DIRTY) \
+    $(wildcard include/config/ARCH_ENABLE_THP_MIGRATION) \
+    $(wildcard include/config/HAVE_ARCH_HUGE_VMAP) \
+    $(wildcard include/config/X86_ESPFIX64) \
+  arch/x86/include/asm/pgtable.h \
+    $(wildcard include/config/DEBUG_WX) \
+  arch/x86/include/asm/pkru.h \
+  arch/x86/include/asm/fpu/xstate.h \
+  arch/x86/include/asm/fpu/api.h \
+    $(wildcard include/config/X86_DEBUG_FPU) \
+  arch/x86/include/asm/user.h \
+  arch/x86/include/asm/user_64.h \
+  include/asm-generic/pgtable_uffd.h \
+  arch/x86/include/asm/pgtable_64.h \
+  arch/x86/include/asm/fixmap.h \
+    $(wildcard include/config/PROVIDE_OHCI1394_DMA_INIT) \
+    $(wildcard include/config/X86_IO_APIC) \
+    $(wildcard include/config/PCI_MMCONFIG) \
+    $(wildcard include/config/ACPI_APEI_GHES) \
+    $(wildcard include/config/INTEL_TXT) \
+  arch/x86/include/uapi/asm/vsyscall.h \
+  include/asm-generic/fixmap.h \
+  arch/x86/include/asm/pgtable-invert.h \
+  include/linux/huge_mm.h \
+  include/linux/sched/coredump.h \
+    $(wildcard include/config/CORE_DUMP_DEFAULT_ELF_HEADERS) \
+  include/linux/vmstat.h \
+    $(wildcard include/config/VM_EVENT_COUNTERS) \
+    $(wildcard include/config/DEBUG_TLBFLUSH) \
+    $(wildcard include/config/DEBUG_VM_VMACACHE) \
+  include/linux/vm_event_item.h \
+    $(wildcard include/config/MEMORY_BALLOON) \
+    $(wildcard include/config/BALLOON_COMPACTION) \
+  include/linux/highmem.h \
+  include/linux/hardirq.h \
+  include/linux/context_tracking_state.h \
+    $(wildcard include/config/CONTEXT_TRACKING) \
+  include/linux/ftrace_irq.h \
+    $(wildcard include/config/HWLAT_TRACER) \
+    $(wildcard include/config/OSNOISE_TRACER) \
+  include/linux/vtime.h \
+    $(wildcard include/config/VIRT_CPU_ACCOUNTING) \
+    $(wildcard include/config/IRQ_TIME_ACCOUNTING) \
+  arch/x86/include/asm/hardirq.h \
+    $(wildcard include/config/KVM_INTEL) \
+    $(wildcard include/config/HAVE_KVM) \
+    $(wildcard include/config/X86_THERMAL_VECTOR) \
+    $(wildcard include/config/X86_MCE_THRESHOLD) \
+    $(wildcard include/config/X86_MCE_AMD) \
+    $(wildcard include/config/X86_HV_CALLBACK_VECTOR) \
+    $(wildcard include/config/HYPERV) \
+  arch/x86/include/asm/cacheflush.h \
+  include/asm-generic/cacheflush.h \
+  include/linux/highmem-internal.h \
+  include/linux/hugetlb_inline.h \
+  include/linux/moduleparam.h \
+    $(wildcard include/config/ALPHA) \
+    $(wildcard include/config/PPC64) \
+  include/linux/module.h \
+    $(wildcard include/config/MODULES_TREE_LOOKUP) \
+    $(wildcard include/config/STACKTRACE_BUILD_ID) \
+    $(wildcard include/config/MODULE_SIG) \
+    $(wildcard include/config/KALLSYMS) \
+    $(wildcard include/config/BPF_EVENTS) \
+    $(wildcard include/config/DEBUG_INFO_BTF_MODULES) \
+    $(wildcard include/config/EVENT_TRACING) \
+    $(wildcard include/config/MODULE_UNLOAD) \
+    $(wildcard include/config/CONSTRUCTORS) \
+    $(wildcard include/config/FUNCTION_ERROR_INJECTION) \
+  include/linux/buildid.h \
+    $(wildcard include/config/CRASH_CORE) \
+  include/linux/kmod.h \
+  include/linux/umh.h \
+  include/linux/elf.h \
+    $(wildcard include/config/ARCH_USE_GNU_PROPERTY) \
+    $(wildcard include/config/ARCH_HAVE_ELF_PROT) \
+  arch/x86/include/asm/elf.h \
+    $(wildcard include/config/X86_X32_ABI) \
+  arch/x86/include/asm/fsgsbase.h \
+  arch/x86/include/asm/vdso.h \
+    $(wildcard include/config/X86_X32) \
+  include/uapi/linux/elf.h \
+  include/uapi/linux/elf-em.h \
+  include/linux/kobject.h \
+    $(wildcard include/config/UEVENT_HELPER) \
+    $(wildcard include/config/DEBUG_KOBJECT_RELEASE) \
+  include/linux/sysfs.h \
+  include/linux/kernfs.h \
+    $(wildcard include/config/KERNFS) \
+  include/linux/idr.h \
+  include/linux/kobject_ns.h \
+  include/linux/kref.h \
+  include/linux/rbtree_latch.h \
+  include/linux/error-injection.h \
+  include/asm-generic/error-injection.h \
+  include/linux/cfi.h \
+    $(wildcard include/config/CFI_CLANG_SHADOW) \
+  arch/x86/include/asm/module.h \
+    $(wildcard include/config/UNWINDER_ORC) \
+  include/asm-generic/module.h \
+    $(wildcard include/config/HAVE_MOD_ARCH_SPECIFIC) \
+    $(wildcard include/config/MODULES_USE_ELF_REL) \
+    $(wildcard include/config/MODULES_USE_ELF_RELA) \
+  arch/x86/include/asm/orc_types.h \
+  /home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/../src/helper.h \
 
 /home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o: $(deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o)
 

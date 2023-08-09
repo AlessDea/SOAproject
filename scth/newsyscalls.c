@@ -127,6 +127,12 @@ int update_file_size(int size){
         return -EIO;
     }
 
+    /* the block in the bh must be visible when the insert in rcu list is done (for concurrency)*/
+    if(!list_insert(&dev_map, off)){
+        printk(KERN_INFO "%s: thread %d request for put_data sys_call error\n",MOD_NAME,current->pid);
+        return -ENOMEM;
+    }
+
     printk(KERN_INFO "%s: thread %d request for put_data sys_call .. trying to write msg: %s\n",MOD_NAME,current->pid, blk->data);
 
     memcpy(bh->b_data, (char *)blk, sizeof(struct block));
@@ -136,11 +142,7 @@ int update_file_size(int size){
     mark_buffer_dirty(bh);
     brelse(bh);
 
-    /* the block in the list must be visible when the write in bh is done */
-    if(!list_insert(&dev_map, off)){
-        printk(KERN_INFO "%s: thread %d request for put_data sys_call error\n",MOD_NAME,current->pid);
-        return -ENOMEM;
-    }
+    
 
     //+1 for the null terminator which become a \n in the read operation
     //when a read is performed, with cat for example, the buffer has len as the file, so we need
