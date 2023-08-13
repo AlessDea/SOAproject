@@ -41,7 +41,7 @@
 struct block{
     short metadata;
     char data[MSG_MAX_SIZE];
-    int prev; //next block according to the order of the delivery of data
+    long prev; //next block according to the order of the delivery of data
 };
 
 

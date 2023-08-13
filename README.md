@@ -96,3 +96,12 @@ Per verificare che il filesystem esista basta verificare che il module `singlefi
 2. create-fs deve essere chiamato solo la prima volta che viene creato il device driver, poichè nelle altre circostanze esiste già il device driver e si vuole probabilmente continuare con quello. In caso chiedere all'utente
 
 3. funzione che al riavvio ricostruisce la rcu list dal device se questo non è stato ripristinato
+
+----
+
+AGGIORNAMENTI:
+1. nel blocco mettere next invece di prev, così ad ogni inserimento basta mettere -1 a tale valore
+	1. quando viene inserito un nuovo elemento bisogna andare nel 'last' (indicato nella rcu list) e cambiare il next con la key del nuovo blocco inserito
+2. per rendere tutto concurrency safe, bisogna unire:
+	1. insert e la first_free
+	2. remove e is_valid

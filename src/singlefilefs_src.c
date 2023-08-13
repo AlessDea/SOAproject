@@ -187,8 +187,8 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     if(last_k > -1){
         dev_map.last = last_k;
-        list_reload(&dev_map);
         printk(KERN_INFO "%s: the device was found written: starting up with old (last key %d)\n", MOD_NAME, dev_map.last);
+        list_reload(&dev_map);
     }else{
         dev_map.last = -1; //-1 indicates that the device is virgin
         printk(KERN_INFO "%s: the device was found virgin: starting up with fresh data\n", MOD_NAME);

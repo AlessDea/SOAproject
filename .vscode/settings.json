@@ -4,6 +4,9 @@
         "string_view": "c",
         "compare": "c",
         "signal.h": "c",
-        "module.h": "c"
+        "module.h": "c",
+        "memory_resource": "c",
+        "future": "c",
+        "fs.h": "c"
     }
 }

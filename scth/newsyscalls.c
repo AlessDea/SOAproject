@@ -106,7 +106,7 @@ int update_file_size(int size){
         return -ENOMEM;
 
 
-    /* check if there is a free block available */
+    /* check if there is a free block available and if there is then 'book' it. */
     off = list_first_free(&dev_map);
     if(off < 0){
         printk(KERN_INFO "%s: thread %d request for put_data sys_call: no free blocks available", MOD_NAME, current->pid);
@@ -120,6 +120,8 @@ int update_file_size(int size){
     blk->metadata = VALID_MASK ^ (size + 1);
 
     memcpy(blk->data, source, size + 1); // +1 for the null terminator
+
+    //blk->prev = dev_map.last;
 
     // get the buffer_head
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, off+2); // +2 for the superblock and inode blocks

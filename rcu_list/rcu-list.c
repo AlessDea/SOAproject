@@ -125,6 +125,8 @@ int rcu_list_reload(rcu_list * l){
 
 	int lk; //last's key
 
+	short val;
+
 	element *p, *next;
 
 
@@ -132,6 +134,8 @@ int rcu_list_reload(rcu_list * l){
 	next = NULL;
 
 	do{
+		printk(KERN_INFO "%s: reloading\n", MOD_NAME);
+
 
 		// get the buffer_head
 		bh = (struct buffer_head *)sb_bread(my_bdev_sb, 2 + lk);
@@ -141,23 +145,26 @@ int rcu_list_reload(rcu_list * l){
 
 		blk = (struct block*)bh->b_data;
 
+		printk(KERN_INFO "%s: msg: %s (%ld)\n",MOD_NAME,blk->data, MSG_LEN(blk->metadata));
+
+
 		// check if the block is valid
 		// if the block is valid get the next field and go to that block
-		if(IS_VALID(blk->metadata) == CHCECK_V_MASK){ // this check is useless if all the update logic of the blocks has been implemented in the right way
+//		if(IS_VALID(blk->metadata) == CHCECK_V_MASK){ // this check is useless if all the update logic of the blocks has been implemented in the right way
 			//the block is valid
-			p = kmalloc(sizeof(element), GFP_KERNEL);
+		p = kmalloc(sizeof(element), GFP_KERNEL);
 
-			if(!p) return 0;
+		if(!p) return 0;
 
-			p->key = lk;
-			p->next = next;
-			p->validity = 1;
+		p->key = lk;
+		p->next = next;
+		p->validity = 1;
 
-			next = p;
+		next = p;
 
-			printk(KERN_INFO "%s: reloaded block %ld informations\n", MOD_NAME, p->key);
+		printk(KERN_INFO "%s: reloaded block %ld informations\n", MOD_NAME, p->key);
 
-		}
+		//}
 
 		lk = blk->prev;
 			
@@ -172,9 +179,6 @@ int rcu_list_reload(rcu_list * l){
                                     //using some different solution
             printk(KERN_INFO "%s: application startup error - RCU-list house-keeper not activated\n", MOD_NAME);
 			wake_up_process(ts);
-	}else{
-		
-		// module_put(THIS_MODULE);
 	}
 
 	return 0;
@@ -357,6 +361,7 @@ int rcu_list_remove(rcu_list *l, long key){
 	unsigned long updated_epoch;
 	unsigned long grace_period_threads;
 	int index;
+	long ret;
 
 
     write_lock(&l->write_lock);
@@ -375,6 +380,11 @@ int rcu_list_remove(rcu_list *l, long key){
 			if ( p->next != NULL && p->next->key == key){
 				if(p->next->next == NULL){ //if it is the last block then update field 'last'
 					l->last = p->key; 
+				}else{
+					// we have to change the prev field of the removed's next block. 
+					// Let's return that block's number.
+					// p->key is the one to set in the prev field of the block p->next->next
+					// TODO: ret = p->next->next->key;
 				}
                 __sync_fetch_and_sub(&l->keys[key], 1); // atomic block free key for new use
 				removed = p->next;
