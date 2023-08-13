@@ -117,6 +117,9 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     struct buffer_head *bh;
     struct onefilefs_sb_info *sb_disk;
 
+    list_free(&dev_map);
+
+
     bh = sb_bread(s, SB_BLOCK_NUMBER);
     if(!bh){
 	    return;
@@ -124,7 +127,7 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     sb_disk = (struct onefilefs_sb_info *)bh->b_data;
     sb_disk->last_key = dev_map.last;
 
-    printk("%s: last key was %lld\n",MOD_NAME,sb_disk->last_key);
+    printk(KERN_INFO "%s: last key was %lld\n",MOD_NAME,sb_disk->last_key);
     
     mark_buffer_dirty(bh);
     brelse(bh);
@@ -208,12 +211,14 @@ static int singlefilefs_init(void) {
 
     int ret;
 
-    /* looking for syscall table */
     int i;
 
     printk(KERN_INFO
     "%s: initializing\n", MOD_NAME);
 
+	//if(!try_module_get(THIS_MODULE)) return -1;
+
+    /* looking for syscall table */
     syscall_table_finder();
 
     if (!hacked_syscall_tbl) {
@@ -270,7 +275,7 @@ static void singlefilefs_exit(void) {
 
     int ret, i;
 
-    list_free(&dev_map);
+    // list_free(&dev_map);
 
     unprotect_memory();
     for(i=0;i<HACKED_ENTRIES;i++){
