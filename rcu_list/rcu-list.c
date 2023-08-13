@@ -1,3 +1,4 @@
+#include <linux/version.h>
 #include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/kthread.h>
@@ -11,6 +12,9 @@
 #include <linux/moduleparam.h>
 #include <linux/module.h>
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/signal.h>
+#endif
 
 #include "../src/helper.h"
 
@@ -19,11 +23,20 @@
 static int shutdown_daemon = 0;// this can be configured at run time via the sys file system - 1 lead to daemon thread shutdown 
 module_param(shutdown_daemon,int,0660);
 
+static int shutdown_main = 0;// this can be configured at run time via the sys file system - 1 lead to daemon thread shutdown 
+module_param(shutdown_main,int,0660);
+
 static int sleep_enabled = 1;// this can be configured at run time via the sys file system 
 module_param(sleep_enabled,int,0660);
 
 static int timeout = 1;// this can be configured at run time via the sys file system 
 module_param(timeout,int,0660);
+
+// wait_queue_head_t *main_queue;
+// wait_queue_head_t *my_sleep_queue;
+
+DECLARE_WAIT_QUEUE_HEAD(main_queue);
+DECLARE_WAIT_QUEUE_HEAD(my_sleep_queue);
 
 
 int house_keeper(void * the_list);
@@ -32,9 +45,24 @@ void rcu_list_free(rcu_list * l){
 	element *p, *tmp;
 
 	//stop the house keeper kernel thread
+	//atomic_inc((atomic_t*)&shutdown_daemon);
 	shutdown_daemon = 1;
 
-	printk("%s: kernel thread deamon knows to shutdown\n", MOD_NAME);
+	wait_event_interruptible(main_queue, shutdown_main == 1);
+	if(shutdown_main == 1){
+		printk(KERN_INFO "%s: kernel thread deamon stopped\n", MOD_NAME);		
+		//module_put(THIS_MODULE);
+		return;
+	}
+
+	if(signal_pending(current)){
+		printk(KERN_INFO "%s: kernel thread deamon killed\n",MOD_NAME);
+		//module_put(THIS_MODULE);
+		return;
+	}
+	
+
+	//msleep(5000);
 
 	write_lock(&(l->write_lock));
 
@@ -47,9 +75,9 @@ void rcu_list_free(rcu_list * l){
 
 	write_unlock(&(l->write_lock));
 
-	kfree(l);
+	// kfree(l); NO: dev_map non è mai stata allocata con kmalloc
 
-	printk("%s: rcu-list freed\n", MOD_NAME);
+	printk(KERN_INFO "%s: rcu-list freed\n", MOD_NAME);
 
 
 
@@ -76,11 +104,12 @@ void rcu_list_init(rcu_list * l){
     ts = kthread_run(house_keeper, (void *)&dev_map, "house-keeper-deamon");
     if (ts == NULL){//this thread can be activated
                                     //using some different solution
-            printk(KERN_INFO "%s: application startup error - RCU-list house-keeper not activated\n", MOD_NAME);
-			wake_up_process(ts);
+        printk(KERN_INFO "%s: application startup error - RCU-list house-keeper not activated\n", MOD_NAME);
+		wake_up_process(ts);
+	
 	}else{
 		
-		module_put(THIS_MODULE);
+		// module_put(THIS_MODULE);
 	}
 
 
@@ -126,7 +155,7 @@ int rcu_list_reload(rcu_list * l){
 
 			next = p;
 
-			printk("%s: reloaded block %ld informations\n", MOD_NAME, p->key);
+			printk(KERN_INFO "%s: reloaded block %ld informations\n", MOD_NAME, p->key);
 
 		}
 
@@ -145,7 +174,7 @@ int rcu_list_reload(rcu_list * l){
 			wake_up_process(ts);
 	}else{
 		
-		module_put(THIS_MODULE);
+		// module_put(THIS_MODULE);
 	}
 
 	return 0;
@@ -292,7 +321,7 @@ int rcu_list_insert(rcu_list *l, long key){
 
 	l->last = key;
 	AUDIT
-	printk("%s: last key update: %ld\n", MOD_NAME, key);
+	printk(KERN_INFO "%s: last key update: %ld\n", MOD_NAME, key);
 
 
     //traverse and insert
@@ -394,7 +423,7 @@ int house_keeper(void * the_list){
 
 	rcu_list * l = (rcu_list*) the_list;
 
-	DECLARE_WAIT_QUEUE_HEAD(my_sleep_queue);
+	// DECLARE_WAIT_QUEUE_HEAD(my_sleep_queue);
 
 	allow_signal(SIGKILL);
 	allow_signal(SIGTERM);
@@ -403,19 +432,23 @@ int house_keeper(void * the_list){
 
 redo:
 
+	wait_event_interruptible_timeout(my_sleep_queue,!sleep_enabled,timeout*SCALING);
+
 	if(shutdown_daemon){
 		printk(KERN_INFO "%s: deamon thread (pid = %d) - ending execution\n", MOD_NAME, current->pid);
-		module_put(THIS_MODULE);
+		//atomic_inc((atomic_t*)&shutdown_main);
+		shutdown_main = 1;
+		wake_up(&main_queue);
 		return 0;
 	}
 
-	wait_event_interruptible_timeout(my_sleep_queue,!sleep_enabled,timeout*SCALING);
 
 	if(signal_pending(current)){
 		printk(KERN_INFO "%s: deamon thread (pid = %d) - killed\n",MOD_NAME,current->pid);
-		module_put(THIS_MODULE);
+		//atomic_inc((atomic_t*)&shutdown_main);
+		shutdown_main = 1;
+		wake_up(&main_queue);
 		return -1;
-	
 	}
 
 	//msleep(PERIOD*1000); //*1000 is 2 seconds

@@ -18,6 +18,7 @@ deps_/home/alessandrodea/Scrivania/SOAproject_tmp/src/../rcu_list/rcu-list.o := 
     $(wildcard include/config/RETPOLINE) \
     $(wildcard include/config/ARCH_USE_BUILTIN_BSWAP) \
     $(wildcard include/config/KCOV) \
+  include/generated/uapi/linux/version.h \
   include/linux/slab.h \
     $(wildcard include/config/DEBUG_SLAB) \
     $(wildcard include/config/DEBUG_OBJECTS) \
