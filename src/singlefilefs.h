@@ -46,7 +46,7 @@ struct onefilefs_sb_info {
 	uint64_t version;
 	uint64_t magic;
 	uint64_t block_size;
-	uint64_t inodes_count;//not exploited
+	uint64_t first_key;
 	uint64_t last_key;
 
 	//padding to fit into a single block

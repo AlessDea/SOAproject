@@ -50,10 +50,11 @@ int main(int argc, char *argv[])
 	}
 
 	//pack the superblock
-	sb.version = 1;//file system version
+	sb.version = 1; //file system version
 	sb.magic = MAGIC;
 	sb.block_size = DEFAULT_BLOCK_SIZE;
 	sb.last_key = -1;
+	sb.first_key = -1;
 
 	ret = write(fd, (char *)&sb, sizeof(sb));
 

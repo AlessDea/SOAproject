@@ -13,7 +13,7 @@ cd ./src || exit
 make clean
 make all # 2>/dev/null
 
-exit 0
+# exit 0
 # check if the device already exists
 echo "${FILE}"
 if test -f $FILE; 
@@ -63,7 +63,8 @@ sudo make mount-fs
 # simple user client
 read -p "Do you want to run user client? (y/n)" yn
 case $yn in 
-  [yY] )  sh user.sh;;
+  [yY] )  chmod u+x usr.sh
+          ./usr.sh;;
   [nN] )  echo "you can run it with the script usr.sh"
           exit 0;;
   * )     echo "invalid response"

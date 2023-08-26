@@ -13,7 +13,7 @@ metadata small size.
 
 
 > N.B.
-> Having an rcu list is not so bad, because of caching. In fact when an operation is performed on the device, we get the buffer-head of the target block so thath it is in cache. Performing all the rcu operations
+> Having an rcu list is not so bad, because of caching. In fact when an operation is performed on the device, we get the buffer-head of the target block so that it is in cache. Performing all the rcu operations
 > on the device would mean that all the blocks has to be moved in cache.
 > 
 > The 'problem' is that using the rcu list means that the metadata part in each block is useless.

@@ -71,6 +71,8 @@ int update_file_size(int size){
     }
     FS_specific_inode = (struct onefilefs_inode*)bh->b_data;
     FS_specific_inode->file_size += size;
+
+    mark_buffer_dirty(bh);
     brelse(bh);
 
     return 0;
@@ -89,9 +91,11 @@ int update_file_size(int size){
     asmlinkage int sys_put_data(char * source, size_t size){
 #endif
 
-    int off;
-    struct block *blk;
+    struct block *blk, *blk1;
     struct buffer_head *bh;
+    struct insert_ret ret;
+    char* addr;
+    int ret1;
 
     printk(KERN_INFO "%s: thread %d requests a put_data sys_call\n",MOD_NAME,current->pid);
 
@@ -102,44 +106,82 @@ int update_file_size(int size){
      * */
 
     /* check if size is less-equal of the block size */
-    if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
-        return -ENOMEM;
+    // if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
+    if((size) >= MSG_MAX_SIZE)  //+1 for the null terminato
+        return -ENOMEM; // = doesn't permit to store the '/0' at the end
+    
 
 
     /* check if there is a free block available and if there is then 'book' it. */
-    off = list_first_free(&dev_map);
-    if(off < 0){
-        printk(KERN_INFO "%s: thread %d request for put_data sys_call: no free blocks available", MOD_NAME, current->pid);
-        return -ENOMEM;
-    }
+    // off = list_first_free(&dev_map);
+    // if(off < 0){
+    //     printk(KERN_INFO "%s: thread %d request for put_data sys_call: no free blocks available", MOD_NAME, current->pid);
+    //     return -ENOMEM;
+    // }
 
-
-    /* perform the write in bh */
-    blk = kzalloc(sizeof(struct block *), GFP_KERNEL);
-
-    blk->metadata = VALID_MASK ^ (size + 1);
-
-    memcpy(blk->data, source, size + 1); // +1 for the null terminator
-
-    //blk->prev = dev_map.last;
-
-    // get the buffer_head
-    bh = (struct buffer_head *)sb_bread(my_bdev_sb, off+2); // +2 for the superblock and inode blocks
-    if(!bh){
-        return -EIO;
-    }
-
-    /* the block in the bh must be visible when the insert in rcu list is done (for concurrency)*/
-    if(!list_insert(&dev_map, off)){
+/* the block in the bh must be visible when the insert in rcu list is done (for concurrency)*/
+    ret = list_insert(&dev_map);
+    if(ret.curr < 0){
         printk(KERN_INFO "%s: thread %d request for put_data sys_call error\n",MOD_NAME,current->pid);
         return -ENOMEM;
     }
 
-    printk(KERN_INFO "%s: thread %d request for put_data sys_call .. trying to write msg: %s\n",MOD_NAME,current->pid, blk->data);
 
-    memcpy(bh->b_data, (char *)blk, sizeof(struct block));
+    if (ret.prev != -1){
+   
+        // if the prev is the rcu list head then don't need to have the next field
 
-    printk(KERN_INFO "%s: thread %d request for put_data sys_call .. wrote msg: %s (%ld) [metadata: %d]\n",MOD_NAME,current->pid, ((struct block *)(bh->b_data))->data, size, blk->metadata);
+        // update the previouse block's next field with this one
+        bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.prev+2); // +2 for the superblock and inode blocks
+        if(!bh){
+            return -EIO;
+        }
+        blk = (struct block*)bh->b_data;
+        blk->next = ret.curr;
+
+        //printk(KERN_INFO "%s: prev's (%ld) next %ld\n",MOD_NAME,ret.prev,blk->next);
+
+        mark_buffer_dirty(bh);
+        brelse(bh);
+
+        //blk = NULL;
+
+    }
+
+
+    addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
+     if(!addr){
+        printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
+        return -EIO;
+    }
+
+    /* perform the write in bh */
+    blk1 = kzalloc(sizeof(struct block *), GFP_KERNEL);
+    if(!blk1){
+        printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
+        return -EIO;
+    }
+
+    ret1 = copy_from_user((char*)addr,(char*)source, size);//returns the number of bytes NOT copied
+    addr[size] = '\0';
+
+    blk1->metadata = VALID_MASK ^ (size);
+
+    memcpy(blk1->data, addr, size+1);
+
+    blk1->next = -1; // the next of the last inserted block is always null
+
+    // get the buffer_head
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.curr+2); // +2 for the superblock and inode blocks
+    if(!bh){
+        return -EIO;
+    }
+
+    //printk(KERN_INFO "%s: thread %d request for put_data sys_call .. trying to write msg: %s\n",MOD_NAME,current->pid, blk1->data);
+
+    memcpy(bh->b_data, (char *)blk1, sizeof(struct block));
+
+    //printk(KERN_INFO "%s: thread %d request for put_data sys_call .. wrote msg: %s (%ld)\n",MOD_NAME,current->pid, ((struct block *)(bh->b_data))->data, size);
 
     mark_buffer_dirty(bh);
     brelse(bh);
@@ -149,11 +191,14 @@ int update_file_size(int size){
     //+1 for the null terminator which become a \n in the read operation
     //when a read is performed, with cat for example, the buffer has len as the file, so we need
     //space for the \n for each message
-    update_file_size(size+1);
+    // update_file_size(size+1);
+    update_file_size(size);
     printk(KERN_INFO "%s: thread %d request for put_data sys_call success\n",MOD_NAME,current->pid);
 
-
-    return off;
+    // kfree(blk);
+    // kfree(blk1);
+    kfree(addr);
+    return ret.curr;
 }
 
 
@@ -163,18 +208,23 @@ int update_file_size(int size){
     asmlinkage int sys_get_data(int offset, char * destination, size_t size){
 #endif
 
-    int len;
+    short len;
     struct buffer_head *bh;
     struct block *blk;
+    char *addr;
+    int ret;
+    short to_cpy;
 
 
-    printk(KERN_INFO "%s: thread %d requests a get_data sys_call\n",MOD_NAME,current->pid);
+    //printk(KERN_INFO "%s: thread %d requests a get_data sys_call\n",MOD_NAME,current->pid);
 
     /* check if offset exists */
     //if(BLK_INDX(offset) > NBLOCKS-1)
     //    return -ENODATA;
 
     //off = BLK_INDX(offset);
+
+    
 
     if(rcu_list_is_valid(&dev_map, offset) == 0){
         printk(KERN_INFO "%s: thread %d request for get_data sys_call error: the block is not available\n", MOD_NAME, current->pid);
@@ -191,13 +241,30 @@ int update_file_size(int size){
 
     len = MSG_LEN(blk->metadata);
 
-    memcpy(destination, blk->data, (len > size) ? (size+1) : (len+1));
+    if(size >= MSG_MAX_SIZE) //too much 
+        to_cpy = len;
+    else if(size >= len)
+        to_cpy = len;
+    else
+        to_cpy = size;
+
+    //addr = (void*)get_zeroed_page(GFP_KERNEL);
+
+    addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
+
+    memcpy((char*)addr, (char*)blk->data, to_cpy+1);
+    addr[to_cpy] = 0x00;
+    //destination[(len > size) ? (size) : (len)] = 0x00; non serve perchè tanto copio o len o size
+
+    ret = copy_to_user((char*)destination,(char*)addr,to_cpy);//returns the number of bytes NOT copied
 
     brelse(bh);
 
+    kfree(addr);
+
     printk(KERN_INFO "%s: thread %d request for get_data sys_call success\n",MOD_NAME,current->pid);
 
-    return (len > size) ? size : len;
+    return to_cpy;
 
 }
 
@@ -208,39 +275,59 @@ int update_file_size(int size){
     asmlinkage int sys_invalidate_data(int, offset){
 #endif
 
-    int ret;
     struct buffer_head *bh;
     struct block *blk;
-
-
+    struct invalidate_ret ret;
+    
     printk("%s: thread %d requests a invalidate_data sys_call\n",MOD_NAME,current->pid);
 
     // check if the block is already invalid
-    ret = list_is_valid(&dev_map, offset);
-    if(ret == 0){
+    // ret = list_is_valid(&dev_map, offset);
+    // if(ret == 0){
+    //     printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
+    //     return 0; //already invalid
+    // } controllare se è valido non serve, lo fa già remove il controllo
+
+
+    // update the device map setting invalid the block at offset
+    ret = list_remove(&dev_map, offset);
+    if(ret.next == -1 && ret.prev == -1){
         printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
         return 0; //already invalid
     }
-    // update the device map setting invalid the block at offset
-    list_remove(&dev_map, offset);
-    // at this point the upcoming reads operations don't find the invalidated block in the list
+    
+    // update the previouse block's next field
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.prev + 2);
+    if(!bh){
+        return -EIO;
+    }
 
+    blk = (struct block*)bh->b_data;
+    blk->next = ret.next;
+
+    mark_buffer_dirty(bh);
+    brelse(bh);
+
+    blk = NULL;
+    bh = NULL;
+
+    // at this point the upcoming reads operations don't find the invalidated block in the list
     // update the metadata of that block
-    bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset);
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset + 2);
     if(!bh){
         return -EIO;
     }
 
     blk = (struct block*)bh->b_data;
     blk->metadata = INVALIDATE(blk->metadata);
+    blk->next = -2;
 
-    update_file_size(-(MSG_LEN(blk->metadata) + 1)); // +1 is for the \n thai is logically used for the division of the messages
+    update_file_size(-(MSG_LEN(blk->metadata)+1)); // +1 is for the \n that is logically used for the division of the messages
 
     mark_buffer_dirty(bh);
     brelse(bh);
 
-    printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call success\n",MOD_NAME,current->pid);
-
+    printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call on block %d success\n",MOD_NAME,current->pid, offset);
 
     return 0;
 

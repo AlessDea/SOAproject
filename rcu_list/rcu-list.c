@@ -79,8 +79,6 @@ void rcu_list_free(rcu_list * l){
 
 	printk(KERN_INFO "%s: rcu-list freed\n", MOD_NAME);
 
-
-
 }
 
 void rcu_list_init(rcu_list * l){
@@ -112,40 +110,48 @@ void rcu_list_init(rcu_list * l){
 		// module_put(THIS_MODULE);
 	}
 
-
 }
 
+void rcu_list_reload_insert(rcu_list *l, element *e){
 
-int rcu_list_reload(rcu_list * l){
+	element *tmp;
+	tmp = l->head;
+	while(tmp->next != NULL){
+		tmp = tmp->next;
+		printk(KERN_INFO "%s: blk %ld -> \n", MOD_NAME, tmp->key);
+	}
+	tmp->next = e;
+}
+
+// TODO: modify with the information of next field of the block
+int rcu_list_reload(rcu_list * l, struct super_block *sb){
 
     struct task_struct *ts;
 
 	struct buffer_head *bh;
 	struct block *blk;
 
-	int lk; //last's key
+	long fk; //first key
 
-	short val;
+	element *p;
 
-	element *p, *next;
+	fk = l->first;	// starting point
 
-
-	lk = l->last;
-	next = NULL;
+	
 
 	do{
-		printk(KERN_INFO "%s: reloading\n", MOD_NAME);
+		printk(KERN_INFO "%s: reloading from %ld\n", MOD_NAME, fk);
 
 
 		// get the buffer_head
-		bh = (struct buffer_head *)sb_bread(my_bdev_sb, 2 + lk);
+		bh = (struct buffer_head *)sb_bread(sb, 2 + fk);
 		if(!bh){
 			return -EIO;
 		}
 
 		blk = (struct block*)bh->b_data;
 
-		printk(KERN_INFO "%s: msg: %s (%ld)\n",MOD_NAME,blk->data, MSG_LEN(blk->metadata));
+		printk(KERN_INFO "%s: msg: %s (%d)\n",MOD_NAME,blk->data,MSG_LEN(blk->metadata));
 
 
 		// check if the block is valid
@@ -156,27 +162,30 @@ int rcu_list_reload(rcu_list * l){
 
 		if(!p) return 0;
 
-		p->key = lk;
-		p->next = next;
+		p->key = fk;
+		p->next = NULL;
 		p->validity = 1;
 
-		next = p;
+		l->keys[fk] = 1;
 
 		printk(KERN_INFO "%s: reloaded block %ld informations\n", MOD_NAME, p->key);
 
 		//}
 
-		lk = blk->prev;
-			
-	}while (lk != -1);
-		
-	brelse(bh);
+		list_reload_insert(l, p);
 
-	l->head->next = next;
+		fk = blk->next;
+
+		brelse(bh);
+		blk = NULL;
+
+			
+	}while (fk != -1);
+		
 
 	ts = kthread_run(house_keeper, (void *)&dev_map, "house-keeper-deamon");
     if (ts == NULL){//this thread can be activated
-                                    //using some different solution
+                    //using some different solution
             printk(KERN_INFO "%s: application startup error - RCU-list house-keeper not activated\n", MOD_NAME);
 			wake_up_process(ts);
 	}
@@ -186,71 +195,6 @@ int rcu_list_reload(rcu_list * l){
 }
 
 
-int rcu_list_is_valid(rcu_list *l, long key){
-
-	unsigned long * epoch = &(l->epoch);
-	unsigned long my_epoch;
-	element *p;
-	int index;
-
-	my_epoch = __sync_fetch_and_add(epoch,1);
-	
-	//actual list traversal		
-	p = l->head;
-	while(p!=NULL){
-		if ( p->key == key){
-			break;
-		}
-		p = p->next;
-	}
-
-	
-	index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
-	__sync_fetch_and_add(&l->standing[index],1);
-
-	if (p){ // the block exists, it's valid
-        return 1;
-    }
-
-    // the block is not valid
-	return 0;
-
-}
-
-
-
-int rcu_list_first_free(rcu_list *l){
-
-    unsigned long * epoch = &(l->epoch);
-    unsigned long my_epoch;
-    int index;
-    int i;
-
-    my_epoch = __sync_fetch_and_add(epoch,1);
-
-    write_lock(&(l->write_lock));
-
-    for(i = 0; i < NBLOCKS; i++){
-        if(l->keys[i] == 0){
-            __sync_fetch_and_add(&l->keys[i], 1); // atomic block reservation for the write
-            break;
-        }
-    }
-
-    write_unlock(&(l->write_lock));
-
-
-    index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
-    __sync_fetch_and_add(&l->standing[index],1);
-
-    if (i < NBLOCKS){ // the block exists and it's valid
-        return i;
-    }
-
-    // no valid blocks
-    return -1;
-
-}
 
 long rcu_list_get_first_valid(rcu_list *l){
     unsigned long * epoch = &(l->epoch);
@@ -304,28 +248,115 @@ long rcu_list_next_valid(rcu_list *l, long start_key){
     return -1; //no valid blocks
 }
 
+int rcu_list_first_free(rcu_list *l){
+
+    unsigned long * epoch = &(l->epoch);
+    unsigned long my_epoch;
+    int index;
+    int i;
+
+    my_epoch = __sync_fetch_and_add(epoch,1);
+
+    write_lock(&(l->write_lock));
+
+    for(i = 0; i < NBLOCKS; i++){
+        if(l->keys[i] == 0){
+            __sync_fetch_and_add(&l->keys[i], 1); // atomic block reservation for the write
+            break;
+        }
+    }
+
+    write_unlock(&(l->write_lock));
 
 
-int rcu_list_insert(rcu_list *l, long key){
+    index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
+    __sync_fetch_and_add(&l->standing[index],1);
+
+    if (i < NBLOCKS){ // the block exists and it's valid
+        return i;
+    }
+
+    // no valid blocks
+    return -1;
+
+}
+
+
+void update_first(rcu_list *l, element *curr){
+	if(l->first == -1){
+		// for insertion
+		l->first = curr->key;
+	}else if(l->first == curr->key){ // for invalidation
+		// the deleted block is the first
+		l->first = curr->next->key;	
+	}
+}
+
+
+//TODO: da errore nell'insert
+struct insert_ret rcu_list_insert(rcu_list *l){
 
 	element *p, *tmp;
+    int i;
+	long key;
+	struct insert_ret ret;
+
+	ret.curr = -1;
+	ret.prev = -1;
+
+    //my_epoch = __sync_fetch_and_add(epoch,1);
+
+	AUDIT
+	printk(KERN_INFO "%s: insertion: waiting for lock\n", MOD_NAME);
+    write_lock(&(l->write_lock));
+
+    for(i = 0; i < NBLOCKS; i++){
+        if(l->keys[i] == 0){
+            __sync_fetch_and_add(&l->keys[i], 1); // atomic block reservation for the write
+            break;
+        }
+    }
+
+    //write_unlock(&(l->write_lock));
+
+
+    // index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
+    // __sync_fetch_and_add(&l->standing[index],1);
+
+    // if (i < NBLOCKS){ // the block exists and it's valid
+    //     return i;
+    // }
+
+    // // no valid blocks
+    // return -1;
+
+	if(i >= NBLOCKS){
+		// no blocks available
+		write_unlock(&(l->write_lock));
+		return ret;
+	}
+
+	key = i;
+	ret.curr = key;
 
 	p = kmalloc(sizeof(element), GFP_KERNEL);
 
-	if(!p) return 0;
+	if(!p){
+		write_unlock(&(l->write_lock));
+		return ret;
+	}
 
 	p->key = key;
 	p->next = NULL;
     p->validity = 1;
-
-	AUDIT
-	printk(KERN_INFO "%s: insertion: waiting for lock\n", MOD_NAME);
-
-    write_lock(&(l->write_lock));
+    //write_lock(&(l->write_lock));
 
 	l->last = key;
+	update_first(l, p);
+
 	AUDIT
-	printk(KERN_INFO "%s: last key update: %ld\n", MOD_NAME, key);
+	printk(KERN_INFO "%s: last key update: %ld\n", MOD_NAME, l->last);
+	printk(KERN_INFO "%s: first key update: %ld\n", MOD_NAME, l->first);
 
 
     //traverse and insert
@@ -334,35 +365,68 @@ int rcu_list_insert(rcu_list *l, long key){
         tmp = tmp->next;
     }
 
-
 	tmp->next = p;
 	asm volatile("mfence");
 
-	while(p){
-		AUDIT
-		printk(KERN_INFO "%s: elem %ld\n", MOD_NAME, p->key);
-		p = p->next;
-	}
+	ret.prev = tmp->key;
+
+	// while(p){
+	// 	AUDIT
+	// 	printk(KERN_INFO "%s: elem %ld\n", MOD_NAME, p->key);
+	// 	p = p->next;
+	// }
+    //write_lock(&(l->write_lock));
 
     write_unlock(&l->write_lock);
 	
-	return 1;
+	return ret;
 
 }
 
 
+int rcu_list_is_valid(rcu_list *l, long key){
+
+	unsigned long * epoch = &(l->epoch);
+	unsigned long my_epoch;
+	element *p;
+	int index;
+
+	my_epoch = __sync_fetch_and_add(epoch,1);
+	
+	//actual list traversal		
+	p = l->head;
+	while(p!=NULL){
+		if (p->key == key){
+			break;
+		}
+		p = p->next;
+	}
+
+	
+	index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
+	__sync_fetch_and_add(&l->standing[index],1);
+
+	if (p){ // the block exists, it's valid
+        return 1;
+    }
+
+    // the block is not valid
+	return 0;
+
+}
 
 
-
-int rcu_list_remove(rcu_list *l, long key){
+struct invalidate_ret rcu_list_remove(rcu_list *l, long key){
 
 	element * p, *removed = NULL;
 	unsigned long last_epoch;
 	unsigned long updated_epoch;
 	unsigned long grace_period_threads;
 	int index;
-	long ret;
+	struct invalidate_ret ret;
 
+	ret.next = -1;
+	ret.prev = -1;
 
     write_lock(&l->write_lock);
 
@@ -374,17 +438,23 @@ int rcu_list_remove(rcu_list *l, long key){
 		removed = p;
 		l->head = removed->next;
 		asm volatile("mfence");//make it visible to readers
+		ret.prev = -1;
+		if(p->next){
+			ret.next = p->next->key;
+		}else{
+			ret.next = -1;
+		}
 	}
 	else{
 		while(p != NULL){
 			if ( p->next != NULL && p->next->key == key){
+				ret.prev = p->key;
 				if(p->next->next == NULL){ //if it is the last block then update field 'last'
-					l->last = p->key; 
+					l->last = p->key;
+					ret.next = -1; 
 				}else{
-					// we have to change the prev field of the removed's next block. 
-					// Let's return that block's number.
-					// p->key is the one to set in the prev field of the block p->next->next
-					// TODO: ret = p->next->next->key;
+					ret.next = p->next->next->key;
+					
 				}
                 __sync_fetch_and_sub(&l->keys[key], 1); // atomic block free key for new use
 				removed = p->next;
@@ -396,6 +466,7 @@ int rcu_list_remove(rcu_list *l, long key){
 			p = p->next;	
 		}
 	}
+
 	//move to a new epoch - still under write lock
 	updated_epoch = (l->next_epoch_index) ? MASK : 0;
 
@@ -411,16 +482,17 @@ int rcu_list_remove(rcu_list *l, long key){
 	while(l->standing[index] < grace_period_threads);
 	l->standing[index] = 0;
 
-
+	if(removed)
+		update_first(l, removed);
 
     write_unlock(&l->write_lock);
 
 	if(removed){
 		kfree(removed);
-		return 1;
+		return ret;
 	}
 	
-	return 0;
+	return ret;
 
 }
 

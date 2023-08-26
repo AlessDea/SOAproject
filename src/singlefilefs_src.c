@@ -119,15 +119,15 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
 
     list_free(&dev_map);
 
-
     bh = sb_bread(s, SB_BLOCK_NUMBER);
     if(!bh){
 	    return;
     }
     sb_disk = (struct onefilefs_sb_info *)bh->b_data;
+    sb_disk->first_key = dev_map.first;
     sb_disk->last_key = dev_map.last;
 
-    printk(KERN_INFO "%s: last key was %lld\n",MOD_NAME,sb_disk->last_key);
+    printk(KERN_INFO "%s: last key was %ld and first key was %ld\n",MOD_NAME,sb_disk->last_key,sb_disk->first_key);
     
     mark_buffer_dirty(bh);
     brelse(bh);
@@ -143,7 +143,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     struct dentry *ret;
     element *rcu_head;
-    int last_k;
+    int last_k, first_k;
     struct onefilefs_sb_info *sb;
     struct buffer_head *bh;
 
@@ -169,9 +169,10 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     rcu_head->validity = -1;
     rcu_head->key = -1;
     rcu_head->next = NULL;
+
     dev_map.head = rcu_head;
 
-    /* check if in the device there is already valid blocks, in case retrieve them and create the map */
+    /* check if in the device there are valid blocks, in case retrieve them and create the map */
     // read the sb (block 0) then retrieve the last_key field
     // get the buffer_head
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, 0);
@@ -181,16 +182,21 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     sb = (struct onefilefs_sb_info*)bh->b_data;
 
+    dev_map.first = sb->first_key;
+
     last_k = sb->last_key;
+    first_k = sb->first_key;
     // mark_buffer_dirty(bh);
     // brelse(bh);
 
     if(last_k > -1){
         dev_map.last = last_k;
-        printk(KERN_INFO "%s: the device was found written: starting up with old (last key %d)\n", MOD_NAME, dev_map.last);
-        list_reload(&dev_map);
+        dev_map.first = first_k;
+        printk(KERN_INFO "%s: the device was found written: starting up with the old one (last key %ld, first key %ld)\n", MOD_NAME, dev_map.last, dev_map.first);
+        list_reload(&dev_map, my_bdev_sb);
     }else{
         dev_map.last = -1; //-1 indicates that the device is virgin
+        dev_map.first = -1;
         printk(KERN_INFO "%s: the device was found virgin: starting up with fresh data\n", MOD_NAME);
     }
 

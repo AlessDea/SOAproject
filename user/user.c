@@ -45,7 +45,7 @@ int main(void){
                 ret = syscall(PUT_DATA, msg, size);
                 if (ret < 0) {
                     printf("syscall error\n");
-                    return -1;
+                    break;
                 }
 
                 printf("message has been stored at offset %d\n", ret);
@@ -58,6 +58,8 @@ int main(void){
                     return -1;
                 }
 
+                bzero(msg, sizeof(char) * 4096);
+
                 size = 2048;
 
                 printf("Insert the offset: ");
@@ -66,18 +68,20 @@ int main(void){
                 ret = syscall(GET_DATA, offset, msg, size);
                 if (ret < 0) {
                     printf("syscall error\n");
-                    return -1;
+                    break;
                 }
 
                 printf("msg: %s\n", msg);
                 break;
 
             case 2:
+                printf("Insert the offset: ");
                 scanf("%d", &offset);
+
                 ret = syscall(INVALIDATE_DATA, offset);
                 if (ret < 0) {
                     printf("syscall error\n");
-                    return -1;
+                    break;
                 }
                 break;
             case 3:
@@ -85,7 +89,7 @@ int main(void){
                 printf("Insert the len of message to read: ");
                 scanf("%ld", &size);
 
-                fd = open("../src/mount/singlefile", O_RDONLY);
+                fd = open("../src/mount/user-msgs", O_RDONLY);
                 if(fd == -1)
                 {
                     printf("open error\n");
@@ -100,6 +104,8 @@ int main(void){
 
                 ret = read(fd, msg, size);
                 printf("read %d bytes, the message is: %s\n", ret, msg);
+
+                close(fd);
 
                 break;
             case 4:

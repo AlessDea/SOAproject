@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd cd ../user || exit
+cd user || exit
 make clear
 make user
 ./user

@@ -24,11 +24,12 @@ int main(void){
         tmp += 4*sizeof(char);
         str += 4*sizeof(char);
     }
+    printf("full msg: %s\n", msg);
     tmp[21] = '\0';
     printf("full msg: %s\n", msg);
 
-    for(int i = 0; i < 21; i++){
-        printf("%d\n", msg[i]);
-    }
+    // for(int i = 0; i < 21; i++){
+    //     printf("%d\n", msg[i]);
+    // }
 
 }
