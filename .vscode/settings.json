@@ -7,6 +7,9 @@
         "module.h": "c",
         "memory_resource": "c",
         "future": "c",
-        "fs.h": "c"
+        "fs.h": "c",
+        "types.h": "c",
+        "array": "c",
+        "string": "c"
     }
 }

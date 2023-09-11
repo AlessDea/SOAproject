@@ -88,6 +88,7 @@ typedef struct rcu_list{
     int next_epoch_index;
     rwlock_t write_lock;
     int keys[NBLOCKS]; //used to mantain block validity (1)
+    long num_of_valid_blocks;
     element * head;
     long first;
     long last; //last valid written block
@@ -108,7 +109,6 @@ extern list dev_map; /* map of the device */
 #define list_reload rcu_list_reload
 #define list_free rcu_list_free
 #define list_reload_insert rcu_list_reload_insert
-
 
 
 void rcu_list_init(rcu_list * l);

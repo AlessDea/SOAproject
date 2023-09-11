@@ -95,6 +95,7 @@ void rcu_list_init(rcu_list * l){
         l->keys[i] = 0;
     }
 	l->head = NULL;
+	l->num_of_valid_blocks = 0;
 	//pthread_spin_init(&l->write_lock,PTHREAD_PROCESS_PRIVATE);
     rwlock_init(&(l->write_lock));
 
@@ -168,6 +169,8 @@ int rcu_list_reload(rcu_list * l, struct super_block *sb){
 
 		l->keys[fk] = 1;
 
+		l->num_of_valid_blocks++;
+
 		printk(KERN_INFO "%s: reloaded block %ld informations\n", MOD_NAME, p->key);
 
 		//}
@@ -231,7 +234,7 @@ long rcu_list_next_valid(rcu_list *l, long start_key){
     // arrive at start_key (the required one)
     p = l->head;
     while(p!=NULL){
-        if ( p->key == start_key){
+        if (p->key == start_key){
             break;
         }
         p = p->next;
@@ -313,6 +316,7 @@ struct insert_ret rcu_list_insert(rcu_list *l){
     for(i = 0; i < NBLOCKS; i++){
         if(l->keys[i] == 0){
             __sync_fetch_and_add(&l->keys[i], 1); // atomic block reservation for the write
+			__sync_fetch_and_add(&l->num_of_valid_blocks, 1);
             break;
         }
     }
@@ -457,6 +461,7 @@ struct invalidate_ret rcu_list_remove(rcu_list *l, long key){
 					
 				}
                 __sync_fetch_and_sub(&l->keys[key], 1); // atomic block free key for new use
+				__sync_fetch_and_sub(&l->num_of_valid_blocks, 1);
 				removed = p->next;
 				p->next = p->next->next;
 

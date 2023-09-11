@@ -29,6 +29,7 @@ int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
 list dev_map; /* map of the device */
 struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
 
+struct mutex f_mutex;
 
 static struct super_operations singlefilefs_super_ops = {
         //not required
@@ -161,6 +162,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
         printk(KERN_INFO "%s: singlefilefs is succesfully mounted on from device %s\n", MOD_NAME, dev_name);
     }
 
+    mutex_init(&f_mutex);
 
     /* create the map of the empty device */
     list_init(&dev_map);
