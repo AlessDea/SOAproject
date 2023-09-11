@@ -16,7 +16,7 @@
 //#include "singlefilefs.h"
 #include "helper.h"
 
-
+//TODO: adjust the offset reset, it doesn't restart from the last position but alway from the 0
 ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *off) {
 
     struct buffer_head *bh = NULL;
@@ -73,11 +73,12 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         return 0;
     }
 
-    if(len > file_size){
-        to_read = file_size;
-    }else{
-        to_read = len;
-    }
+    // if(len > file_size){
+    //     to_read = file_size + 1;
+    // }else{
+    //     to_read = len;
+    // }
+    to_read = len;
     to_read--; //reserve a byte for the \0
     
 
@@ -94,9 +95,9 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     printk(KERN_INFO "%s: read operation in boundaries (len = %ld; file size = %lld)",MOD_NAME, len, file_size);
     
 
-    block_to_read = start_bindx + 2;
+    block_to_read = start_bindx;
     while(to_read > 0 && block_to_read >= 0){
-        //block_to_read += 2; //the value 2 accounts for superblock and file-inode on device
+        block_to_read += 2; //the value 2 accounts for superblock and file-inode on device
 
         printk(KERN_INFO "%s: read operation must access block %ld of the device", MOD_NAME, block_to_read);
 
@@ -147,9 +148,9 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         read += (msg_len + 1 - ret);
         to_read -= (msg_len + 1 - ret);
 
-        block_to_read = list_next_valid(&dev_map, block_to_read - 2) + 2;
+        block_to_read = list_next_valid(&dev_map, block_to_read - 2);
         printk(KERN_INFO "%s: next block to read: %ld", MOD_NAME, block_to_read);
-        printk(KERN_INFO "%s: tmp_len %ld", MOD_NAME, tmp_len);
+        printk(KERN_INFO "%s: tmp_len %ld", MOD_NAME, to_read);
 
         kfree(tmp);
 
@@ -161,6 +162,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //ret = copy_to_user(buf + read + 1, '\0', msg_len);
 
     *off += read;
+    printk(KERN_INFO "%s: last offset position %ld", MOD_NAME, *off);
 
     mutex_unlock(&f_mutex);
 
