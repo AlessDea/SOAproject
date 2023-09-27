@@ -11,12 +11,11 @@
 #include <linux/version.h>
 #include <linux/delay.h>
 
-
+//TODO: aggiungi l'usage: usalo nella read e nelle syscall PUT e INVALIDATE
 
 //#include "singlefilefs.h"
 #include "helper.h"
 
-//TODO: adjust the offset reset, it doesn't restart from the last position but alway from the 0
 ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *off) {
 
     struct buffer_head *bh = NULL;
@@ -29,7 +28,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     short msg_len;
     size_t tmp_len;
     //loff_t start_off;
-    ssize_t read;
+    loff_t read;
     char end_str = '\0';
 
     long start_bindx; //block from which start reading
@@ -61,8 +60,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     if(*off >= file_size){ //EOF
         printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
         *off = 0;
-        // mutex_unlock(&f_mutex);
-        // return 0;
+        mutex_unlock(&f_mutex);
+        return 0;
     }
 
     //check if there is something in the device
@@ -150,7 +149,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         block_to_read = list_next_valid(&dev_map, block_to_read - 2);
         printk(KERN_INFO "%s: next block to read: %ld", MOD_NAME, block_to_read);
-        printk(KERN_INFO "%s: tmp_len %ld", MOD_NAME, to_read);
+        printk(KERN_INFO "%s: to_read %ld", MOD_NAME, to_read);
 
         kfree(tmp);
 
@@ -161,11 +160,12 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //ret = copy_to_user(buf, buffer, len);
     //ret = copy_to_user(buf + read + 1, '\0', msg_len);
 
-    *off += read;
+    *off = *off + read;
     printk(KERN_INFO "%s: last offset position %ld", MOD_NAME, *off);
 
     mutex_unlock(&f_mutex);
 
+    
     return read;
 
 }
@@ -368,6 +368,12 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
 
 int onefilefs_open(struct inode *pinode, struct file *pfile) {
 
+    if (bdev_status.bdev == NULL) {
+		printk("%s: Block Device not mounted\n", MODNAME);
+		return -ENODEV;
+	}
+
+
     if(pfile->f_mode & FMODE_WRITE){
         printk(KERN_INFO "%s: open in write mode not permitted", MOD_NAME);
         return -EPERM;
@@ -381,6 +387,11 @@ int onefilefs_open(struct inode *pinode, struct file *pfile) {
 }
 
 int onefilefs_release(struct inode *pinode, struct file *pfile) {
+
+    if (bdev_status.bdev == NULL) {
+		printk("%s: Block Device not mounted\n", MODNAME);
+		return -ENODEV;
+	}
 
     printk(KERN_INFO "%s: release operation called",MOD_NAME);
 

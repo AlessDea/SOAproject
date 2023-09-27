@@ -28,6 +28,9 @@ int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
 
 list dev_map; /* map of the device */
 struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
+struct bdev_status dev_status __attribute__((aligned(64))) = {0, NULL};
+
+
 
 struct mutex f_mutex;
 
@@ -152,15 +155,14 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     printk(KERN_INFO "%s: mounting", MOD_NAME);
 
     ret = mount_bdev(fs_type, flags, dev_name, data, singlefilefs_fill_super);
-
-    printk(KERN_INFO "%s: mounted", MOD_NAME);
-
     if (unlikely(IS_ERR(ret))) {
         printk(KERN_INFO "%s: error mounting onefilefs", MOD_NAME);
         return ret;
     }else {
         printk(KERN_INFO "%s: singlefilefs is succesfully mounted on from device %s\n", MOD_NAME, dev_name);
     }
+
+    dev_status.bdev = blkdev_get_by_path(dev_name, FMODE_READ|FMODE_WRITE, NULL);
 
     mutex_init(&f_mutex);
 

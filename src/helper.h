@@ -189,6 +189,14 @@ struct onefilefs_sb_info {
     char padding[(4 * 1024) - (3 * sizeof(uint64_t)) - (2 * sizeof(long))];
 };
 
+
+
+struct bdev_status {
+    unsigned int usage;
+    struct block_device *bdev;
+};
+
+
 extern struct mutex f_mutex;
 
 // file.c
@@ -199,6 +207,11 @@ extern const struct file_operations onefilefs_file_operations;
 extern const struct file_operations onefilefs_dir_operations;
 
 extern struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
+
+extern struct bdev_status dev_status;
+{
+    /* data */
+};
 
 
 #endif //SOAPROJECT_HELPER_H
