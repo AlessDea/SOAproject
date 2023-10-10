@@ -163,7 +163,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     }
 
     dev_status.bdev = blkdev_get_by_path(dev_name, FMODE_READ|FMODE_WRITE, NULL);
-
+    dev_status.usage = 0;
     mutex_init(&f_mutex);
 
     /* create the map of the empty device */

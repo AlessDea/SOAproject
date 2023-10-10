@@ -34,9 +34,11 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     long start_bindx; //block from which start reading
     loff_t to_read;
 
+    int srcu_idx;
+
     read = 0;
 
-    
+    atomic_fetch_add(1, &(dev_status.usage)); 
 
     //check if the device is mounted --> fallo in altro modo
     // if(&dev_map == NULL){
@@ -49,18 +51,20 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //this operation is not synchronized
     //*off can be changed concurrently
     //add synchronization if you need it for any reason
-    mutex_lock(&f_mutex);
-
+    rcu_index = srcu_read_lock(&(dev_status.rcu));
+    
     //check that *off is within boundaries
     if(*off < 0){
         mutex_unlock(&f_mutex);
+        atomic_fetch_sub(1, &(dev_status.usage));
         return 0;
     } 
 
     if(*off >= file_size){ //EOF
         printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
         *off = 0;
-        mutex_unlock(&f_mutex);
+        atomic_fetch_sub(1, &(dev_status.usage));
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return 0;
     }
 
@@ -68,7 +72,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     if(rcu_list_get_first_valid(&dev_map) == -1){
         printk(KERN_INFO "%s: Empty file", MOD_NAME);
         *off = 0;
-        mutex_unlock(&f_mutex);
+        atomic_fetch_sub(1, &(dev_status.usage));
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return 0;
     }
 
@@ -102,7 +107,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
         if(!bh){
-            mutex_unlock(&f_mutex);
+            atomic_fetch_sub(1, &(dev_status.usage));
+            srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return -EIO;
         }
 
@@ -124,7 +130,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         tmp = kzalloc(sizeof(char)*(msg_len + 1), GFP_KERNEL); // +1 for '/n'
         if(!tmp){
             printk("%s: kzalloc error, unable to allocate memory for read messages as single file\n", MOD_NAME);
-            mutex_unlock(&f_mutex);
+            atomic_fetch_sub(1, &(dev_status.usage));
+            srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return 0;
         }
         
@@ -140,7 +147,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
             printk(KERN_INFO "%s: An error occured during the copy of the message from kernel space to user space", MOD_NAME);
             kfree(tmp);
             *off = 0;
-            mutex_unlock(&f_mutex);
+            atomic_fetch_sub(1, &(dev_status.usage));
+            srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return 0;
         }
 
@@ -163,8 +171,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     *off = *off + read;
     printk(KERN_INFO "%s: last offset position %ld", MOD_NAME, *off);
 
-    mutex_unlock(&f_mutex);
-
+    srcu_read_unlock(&(dev_status.rcu), rcu_index);
+    atomic_fetch_sub(1, &(dev_status.usage));
     
     return read;
 

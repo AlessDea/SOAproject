@@ -9,6 +9,7 @@
 
 #include <linux/fs.h>
 #include <linux/types.h>
+#include <linux/srcu.h>
 
 
 /* User Messages Driver */
@@ -194,6 +195,7 @@ struct onefilefs_sb_info {
 struct bdev_status {
     unsigned int usage;
     struct block_device *bdev;
+    struct srcu_struct rcu;
 };
 
 

@@ -95,7 +95,7 @@ int update_file_size(int size){
     struct buffer_head *bh;
     struct insert_ret ret;
     char* addr;
-    int ret1;
+    int ret, ret1;
 
     printk(KERN_INFO "%s: thread %d requests a put_data sys_call\n",MOD_NAME,current->pid);
 
@@ -105,11 +105,23 @@ int update_file_size(int size){
      * - there is a free block
      * */
 
+
+    // increment usage count
+    atomic_fetch_add(1, &(dev_status.usage)); 
+
+    // check if device is mounted
+    if(dev_status.bdev == NULL){
+        atomic_fetch_sub(1, &(dev_status.usage));
+        return -ENODEV;
+    }
+
+
     /* check if size is less-equal of the block size */
     // if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
-    if((size) >= MSG_MAX_SIZE)  //+1 for the null terminato
+    if((size) >= MSG_MAX_SIZE){  //+1 for the null terminato
+        atomic_fetch_sub(1, &(dev_status.usage));
         return -ENOMEM; // = doesn't permit to store the '/0' at the end
-    
+    }
 
 
     /* check if there is a free block available and if there is then 'book' it. */
@@ -119,10 +131,19 @@ int update_file_size(int size){
     //     return -ENOMEM;
     // }
 
+
+    ret = mutex_trylock(&f_mutex);
+    if (ret == 0) {
+        printk(KERN_CRIT "%s: mutex_trylock ERROR\n", MODNAME);
+        atomic_fetch_sub(1, &(dev_status.usage));
+        return -EBUSY;
+    }
+
 /* the block in the bh must be visible when the insert in rcu list is done (for concurrency)*/
     ret = list_insert(&dev_map);
     if(ret.curr < 0){
         printk(KERN_INFO "%s: thread %d request for put_data sys_call error\n",MOD_NAME,current->pid);
+        atomic_fetch_sub(1, &(dev_status.usage));
         return -ENOMEM;
     }
 
@@ -134,6 +155,7 @@ int update_file_size(int size){
         // update the previouse block's next field with this one
         bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.prev+2); // +2 for the superblock and inode blocks
         if(!bh){
+            atomic_fetch_sub(1, &(dev_status.usage));
             return -EIO;
         }
         blk = (struct block*)bh->b_data;
@@ -152,6 +174,7 @@ int update_file_size(int size){
     addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
      if(!addr){
         printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
+        atomic_fetch_sub(1, &(dev_status.usage));
         return -EIO;
     }
 
@@ -159,6 +182,7 @@ int update_file_size(int size){
     blk1 = kzalloc(sizeof(struct block *), GFP_KERNEL);
     if(!blk1){
         printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
+        atomic_fetch_sub(1, &(dev_status.usage));
         return -EIO;
     }
 
@@ -171,9 +195,14 @@ int update_file_size(int size){
 
     blk1->next = -1; // the next of the last inserted block is always null
 
+
+    synchronize_srcu(&(dev_status.rcu));
+
+
     // get the buffer_head
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.curr+2); // +2 for the superblock and inode blocks
     if(!bh){
+        atomic_fetch_sub(1, &(dev_status.usage));
         return -EIO;
     }
 
@@ -198,6 +227,8 @@ int update_file_size(int size){
     // kfree(blk);
     // kfree(blk1);
     kfree(addr);
+    atomic_fetch_sub(1, &(dev_status.usage));
+    mutex_unlock(&f_mutex);
     return ret.curr;
 }
 
@@ -214,6 +245,7 @@ int update_file_size(int size){
     char *addr;
     int ret;
     short to_cpy;
+    int srcu_idx;
 
 
     //printk(KERN_INFO "%s: thread %d requests a get_data sys_call\n",MOD_NAME,current->pid);
@@ -224,16 +256,29 @@ int update_file_size(int size){
 
     //off = BLK_INDX(offset);
 
-    
+    // increment usage count
+    atomic_fetch_add(1, &(dev_status.usage)); 
+
+    // check if device is mounted
+    if(dev_status.bdev == NULL){
+        atomic_fetch_sub(1, &(dev_status.usage));
+        return -ENODEV;
+    }
+
+    rcu_index = srcu_read_lock(&(dev_status.rcu));
 
     if(rcu_list_is_valid(&dev_map, offset) == 0){
         printk(KERN_INFO "%s: thread %d request for get_data sys_call error: the block is not available\n", MOD_NAME, current->pid);
+        atomic_fetch_sub(1, &(dev_status.usage)); 
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return -ENODATA;
     }
 
     // get the buffer_head
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset+2);
     if(!bh){
+        atomic_fetch_sub(1, &(dev_status.usage)); 
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return -EIO;
     }
 
@@ -255,6 +300,8 @@ int update_file_size(int size){
     memcpy((char*)addr, (char*)blk->data, to_cpy+1);
     addr[to_cpy] = 0x00;
     //destination[(len > size) ? (size) : (len)] = 0x00; non serve perchè tanto copio o len o size
+
+    srcu_read_unlock(&(dev_status.rcu), rcu_index);
 
     ret = copy_to_user((char*)destination,(char*)addr,to_cpy);//returns the number of bytes NOT copied
 
@@ -278,6 +325,15 @@ int update_file_size(int size){
     struct buffer_head *bh;
     struct block *blk;
     struct invalidate_ret ret;
+
+    // increment usage count
+    atomic_fetch_add(1, &(dev_status.usage)); 
+
+    // check if device is mounted
+    if(dev_status.bdev == NULL){
+        atomic_fetch_sub(1, &(dev_status.usage));
+        return -ENODEV;
+    }
     
     printk("%s: thread %d requests a invalidate_data sys_call\n",MOD_NAME,current->pid);
 
@@ -288,17 +344,29 @@ int update_file_size(int size){
     //     return 0; //already invalid
     // } controllare se è valido non serve, lo fa già remove il controllo
 
+    ret = mutex_trylock(&f_mutex);
+    if (ret == 0) {
+        printk(KERN_CRIT "%s: mutex_trylock ERROR\n", MODNAME);
+        atomic_fetch_sub(1, &(dev_status.usage));
+        return -EBUSY;
+    }
+
+    synchronize_srcu(&(dev_status.rcu));
 
     // update the device map setting invalid the block at offset
     ret = list_remove(&dev_map, offset);
     if(ret.next == -1 && ret.prev == -1){
         printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
+        atomic_fetch_sub(1, &(dev_status.usage));
+        mutex_unlock(&f_mutex);
         return 0; //already invalid
     }
     
     // update the previouse block's next field
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.prev + 2);
     if(!bh){
+        atomic_fetch_sub(1, &(dev_status.usage));
+        mutex_unlock(&f_mutex);
         return -EIO;
     }
 
@@ -315,6 +383,8 @@ int update_file_size(int size){
     // update the metadata of that block
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset + 2);
     if(!bh){
+        atomic_fetch_sub(1, &(dev_status.usage));
+        mutex_unlock(&f_mutex);
         return -EIO;
     }
 
@@ -329,6 +399,8 @@ int update_file_size(int size){
 
     printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call on block %d success\n",MOD_NAME,current->pid, offset);
 
+    atomic_fetch_sub(1, &(dev_status.usage));
+    mutex_unlock(&f_mutex);
     return 0;
 
 }
