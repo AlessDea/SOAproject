@@ -82,57 +82,21 @@ typedef struct rcu_lst_elem{
     short validity;
 } element;
 
-typedef struct rcu_list{
-    unsigned long standing[EPOCHS];	//you can further optimize putting these values
-    //on different cache lines
-    unsigned long epoch; //a different cache line for this can also help
-    int next_epoch_index;
-    rwlock_t write_lock;
+// #######################################################
+typedef struct device_map{
     int keys[NBLOCKS]; //used to mantain block validity (1)
     long num_of_valid_blocks;
-    element * head;
     long first;
     long last; //last valid written block
-} __attribute__((packed)) rcu_list;
+} __attribute__((packed)) device_map;
 
-typedef rcu_list list __attribute__((aligned(64)));
+typedef device_map map __attribute__((aligned(64)));
 
-extern list dev_map; /* map of the device */
-
-
-#define list_insert rcu_list_insert
-#define list_is_valid rcu_list_is_valid
-#define list_remove rcu_list_remove
-#define list_init rcu_list_init
-#define list_first_free rcu_list_first_free
-#define list_next_valid rcu_list_next_valid
-#define list_first_valid rcu_list_get_first_valid
-#define list_reload rcu_list_reload
-#define list_free rcu_list_free
-#define list_reload_insert rcu_list_reload_insert
+extern map dev_map; /* map of the device */
+// #######################################################
 
 
-void rcu_list_init(rcu_list * l);
 
-int rcu_list_is_valid(rcu_list *l, long key);
-
-struct insert_ret rcu_list_insert(rcu_list *l);
-
-struct invalidate_ret rcu_list_remove(rcu_list *l, long key);
-
-long rcu_list_next_valid(rcu_list *l, long start_key);
-
-int rcu_list_first_free(rcu_list *l);
-
-long rcu_list_get_first_valid(rcu_list *l);
-
-int rcu_list_reload(rcu_list *l, struct super_block *sb);
-
-void rcu_list_free(rcu_list *l);
-
-void rcu_list_reload_insert(rcu_list *l, element *e);
-
-void update_first(rcu_list *l, element *curr);
 
 
 /* ------------------------------------------------------------- */

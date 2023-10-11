@@ -136,9 +136,7 @@ int rcu_list_reload(rcu_list * l, struct super_block *sb){
 
 	element *p;
 
-	fk = l->first;	// starting point
-
-	
+	fk = l->first;	// starting point	
 
 	do{
 		printk(KERN_INFO "%s: reloading from %ld\n", MOD_NAME, fk);
@@ -307,12 +305,11 @@ struct insert_ret rcu_list_insert(rcu_list *l){
 	ret.curr = -1;
 	ret.prev = -1;
 
-    //my_epoch = __sync_fetch_and_add(epoch,1);
 
 	AUDIT
 	printk(KERN_INFO "%s: insertion: waiting for lock\n", MOD_NAME);
-    write_lock(&(l->write_lock));
 
+	// search a free
     for(i = 0; i < NBLOCKS; i++){
         if(l->keys[i] == 0){
             __sync_fetch_and_add(&l->keys[i], 1); // atomic block reservation for the write
@@ -321,22 +318,9 @@ struct insert_ret rcu_list_insert(rcu_list *l){
         }
     }
 
-    //write_unlock(&(l->write_lock));
-
-
-    // index = (my_epoch & MASK) ? 1 : 0; //get_index(my_epoch);
-    // __sync_fetch_and_add(&l->standing[index],1);
-
-    // if (i < NBLOCKS){ // the block exists and it's valid
-    //     return i;
-    // }
-
-    // // no valid blocks
-    // return -1;
 
 	if(i >= NBLOCKS){
 		// no blocks available
-		write_unlock(&(l->write_lock));
 		return ret;
 	}
 
@@ -344,16 +328,13 @@ struct insert_ret rcu_list_insert(rcu_list *l){
 	ret.curr = key;
 
 	p = kmalloc(sizeof(element), GFP_KERNEL);
-
 	if(!p){
-		write_unlock(&(l->write_lock));
 		return ret;
 	}
 
 	p->key = key;
 	p->next = NULL;
     p->validity = 1;
-    //write_lock(&(l->write_lock));
 
 	l->last = key;
 	update_first(l, p);

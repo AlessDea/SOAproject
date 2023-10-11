@@ -93,9 +93,9 @@ int update_file_size(int size){
 
     struct block *blk, *blk1;
     struct buffer_head *bh;
-    struct insert_ret ret;
     char* addr;
     int ret, ret1;
+    long key;
 
     printk(KERN_INFO "%s: thread %d requests a put_data sys_call\n",MOD_NAME,current->pid);
 
@@ -132,34 +132,35 @@ int update_file_size(int size){
     // }
 
 
-    ret = mutex_trylock(&f_mutex);
-    if (ret == 0) {
-        printk(KERN_CRIT "%s: mutex_trylock ERROR\n", MODNAME);
+    ret = mutex_lock(&f_mutex);
+    if (ret != 0) {
+        printk(KERN_CRIT "%s: mutex_lock ERROR\n", MODNAME);
         atomic_fetch_sub(1, &(dev_status.usage));
         return -EBUSY;
     }
 
-/* the block in the bh must be visible when the insert in rcu list is done (for concurrency)*/
-    ret = list_insert(&dev_map);
-    if(ret.curr < 0){
+    key = get_next_free_block(&dev_map);
+    if(key < 0){
         printk(KERN_INFO "%s: thread %d request for put_data sys_call error\n",MOD_NAME,current->pid);
         atomic_fetch_sub(1, &(dev_status.usage));
+        mutex_unlock(&f_mutex);
         return -ENOMEM;
     }
 
 
-    if (ret.prev != -1){
+    if (dev_map.last != -1){
    
-        // if the prev is the rcu list head then don't need to have the next field
 
         // update the previouse block's next field with this one
-        bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.prev+2); // +2 for the superblock and inode blocks
+        bh = (struct buffer_head *)sb_bread(my_bdev_sb, dev_map.last + 2); // +2 for the superblock and inode blocks
         if(!bh){
             atomic_fetch_sub(1, &(dev_status.usage));
+            mutex_unlock(&f_mutex);
             return -EIO;
         }
+
         blk = (struct block*)bh->b_data;
-        blk->next = ret.curr;
+        blk->next = key;
 
         //printk(KERN_INFO "%s: prev's (%ld) next %ld\n",MOD_NAME,ret.prev,blk->next);
 
@@ -170,11 +171,15 @@ int update_file_size(int size){
 
     }
 
+    // update last key in the device map
+    dev_map.last = key;
+
 
     addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
      if(!addr){
         printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
         atomic_fetch_sub(1, &(dev_status.usage));
+        mutex_unlock(&f_mutex);
         return -EIO;
     }
 
@@ -183,44 +188,38 @@ int update_file_size(int size){
     if(!blk1){
         printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
         atomic_fetch_sub(1, &(dev_status.usage));
+        mutex_unlock(&f_mutex);
         return -EIO;
     }
 
-    ret1 = copy_from_user((char*)addr,(char*)source, size);//returns the number of bytes NOT copied
+    ret1 = copy_from_user((char*)addr,(char*)source, size); // returns the number of bytes NOT copied
     addr[size] = '\0';
 
     blk1->metadata = VALID_MASK ^ (size);
-
-    memcpy(blk1->data, addr, size+1);
-
     blk1->next = -1; // the next of the last inserted block is always null
+    memcpy(blk1->data, addr, size+1);
 
 
     synchronize_srcu(&(dev_status.rcu));
 
 
     // get the buffer_head
-    bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.curr+2); // +2 for the superblock and inode blocks
+    bh = (struct buffer_head *)sb_bread(my_bdev_sb, key + 2); // +2 for the superblock and inode blocks
     if(!bh){
         atomic_fetch_sub(1, &(dev_status.usage));
+        mutex_unlock(&f_mutex);
         return -EIO;
     }
 
-    //printk(KERN_INFO "%s: thread %d request for put_data sys_call .. trying to write msg: %s\n",MOD_NAME,current->pid, blk1->data);
-
     memcpy(bh->b_data, (char *)blk1, sizeof(struct block));
-
-    //printk(KERN_INFO "%s: thread %d request for put_data sys_call .. wrote msg: %s (%ld)\n",MOD_NAME,current->pid, ((struct block *)(bh->b_data))->data, size);
 
     mark_buffer_dirty(bh);
     brelse(bh);
 
     
-
     //+1 for the null terminator which become a \n in the read operation
     //when a read is performed, with cat for example, the buffer has len as the file, so we need
     //space for the \n for each message
-    // update_file_size(size+1);
     update_file_size(size);
     printk(KERN_INFO "%s: thread %d request for put_data sys_call success\n",MOD_NAME,current->pid);
 
@@ -229,14 +228,14 @@ int update_file_size(int size){
     kfree(addr);
     atomic_fetch_sub(1, &(dev_status.usage));
     mutex_unlock(&f_mutex);
-    return ret.curr;
+    return key;
 }
 
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,17,0)
-    __SYSCALL_DEFINEx(3, _get_data, int, offset, char *, destination, size_t, size){
+    __SYSCALL_DEFINEx(3, _get_data, long, offset, char *, destination, size_t, size){
 #else
-    asmlinkage int sys_get_data(int offset, char * destination, size_t size){
+    asmlinkage int sys_get_data(long offset, char * destination, size_t size){
 #endif
 
     short len;
@@ -267,7 +266,7 @@ int update_file_size(int size){
 
     rcu_index = srcu_read_lock(&(dev_status.rcu));
 
-    if(rcu_list_is_valid(&dev_map, offset) == 0){
+    if(is_block_valid(&dev_map, offset) == 0){
         printk(KERN_INFO "%s: thread %d request for get_data sys_call error: the block is not available\n", MOD_NAME, current->pid);
         atomic_fetch_sub(1, &(dev_status.usage)); 
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
@@ -299,18 +298,15 @@ int update_file_size(int size){
 
     memcpy((char*)addr, (char*)blk->data, to_cpy+1);
     addr[to_cpy] = 0x00;
-    //destination[(len > size) ? (size) : (len)] = 0x00; non serve perchè tanto copio o len o size
 
     srcu_read_unlock(&(dev_status.rcu), rcu_index);
 
     ret = copy_to_user((char*)destination,(char*)addr,to_cpy);//returns the number of bytes NOT copied
 
     brelse(bh);
-
     kfree(addr);
 
     printk(KERN_INFO "%s: thread %d request for get_data sys_call success\n",MOD_NAME,current->pid);
-
     return to_cpy;
 
 }
@@ -344,9 +340,9 @@ int update_file_size(int size){
     //     return 0; //already invalid
     // } controllare se è valido non serve, lo fa già remove il controllo
 
-    ret = mutex_trylock(&f_mutex);
-    if (ret == 0) {
-        printk(KERN_CRIT "%s: mutex_trylock ERROR\n", MODNAME);
+    ret = mutex_lock(&f_mutex);
+    if (ret != 0) {
+        printk(KERN_CRIT "%s: mutex_lock ERROR\n", MODNAME);
         atomic_fetch_sub(1, &(dev_status.usage));
         return -EBUSY;
     }
@@ -354,30 +350,14 @@ int update_file_size(int size){
     synchronize_srcu(&(dev_status.rcu));
 
     // update the device map setting invalid the block at offset
-    ret = list_remove(&dev_map, offset);
-    if(ret.next == -1 && ret.prev == -1){
+    ret = set_invalid_block(&dev_map, offset);
+    if(ret == -1){
         printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
         atomic_fetch_sub(1, &(dev_status.usage));
         mutex_unlock(&f_mutex);
         return 0; //already invalid
     }
     
-    // update the previouse block's next field
-    bh = (struct buffer_head *)sb_bread(my_bdev_sb, ret.prev + 2);
-    if(!bh){
-        atomic_fetch_sub(1, &(dev_status.usage));
-        mutex_unlock(&f_mutex);
-        return -EIO;
-    }
-
-    blk = (struct block*)bh->b_data;
-    blk->next = ret.next;
-
-    mark_buffer_dirty(bh);
-    brelse(bh);
-
-    blk = NULL;
-    bh = NULL;
 
     // at this point the upcoming reads operations don't find the invalidated block in the list
     // update the metadata of that block
@@ -392,7 +372,7 @@ int update_file_size(int size){
     blk->metadata = INVALIDATE(blk->metadata);
     blk->next = -2;
 
-    update_file_size(-(MSG_LEN(blk->metadata)+1)); // +1 is for the \n that is logically used for the division of the messages
+    update_file_size(-(MSG_LEN(blk->metadata) + 1)); // +1 is for the \n that is logically used for the division of the messages
 
     mark_buffer_dirty(bh);
     brelse(bh);

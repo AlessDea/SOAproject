@@ -166,6 +166,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     dev_status.usage = 0;
     mutex_init(&f_mutex);
 
+    // ################################# REMOVE #######################################
     /* create the map of the empty device */
     list_init(&dev_map);
     // insert the head
@@ -175,6 +176,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     rcu_head->next = NULL;
 
     dev_map.head = rcu_head;
+    // ################################# END REMOVE #######################################
 
     /* check if in the device there are valid blocks, in case retrieve them and create the map */
     // read the sb (block 0) then retrieve the last_key field
