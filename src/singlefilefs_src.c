@@ -9,11 +9,11 @@
 #include <linux/string.h>
 #include <linux/version.h>
 #include <linux/srcu.h>
+#include <linux/blkdev.h>
+
 #include "../scth/include/scth.h"
-
-
-
 #include "helper.h"
+
 //#include "singlefilefs.h"
 
 
@@ -123,7 +123,7 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     struct buffer_head *bh;
     struct onefilefs_sb_info *sb_disk;
 
-    list_free(&dev_map);
+    //list_free(&dev_map);
 
     bh = sb_bread(s, SB_BLOCK_NUMBER);
     if(!bh){
@@ -150,7 +150,6 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
 struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, const char *dev_name, void *data) {
 
     struct dentry *ret;
-    element *rcu_head;
     int last_k, first_k;
     struct onefilefs_sb_info *sb;
     struct buffer_head *bh;
@@ -172,7 +171,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     ret = init_srcu_struct(&(dev_status.rcu));
     if (ret != 0) {
-        printk(KERN_CRIT "%s: errore durante il montaggio del filesystem", MODNAME);
+        printk(KERN_CRIT "%s: error mounting onefilefs\n", MOD_NAME);
         return ERR_PTR(-ENOMEM);
     }
 
@@ -210,7 +209,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
         dev_map.first = first_k;
         printk(KERN_INFO "%s: the device was found written: starting up with the old data (last key %ld, first key %ld)\n", MOD_NAME, dev_map.last, dev_map.first);
         //list_reload(&dev_map, my_bdev_sb);
-        reload_device_map(&dev_map, my_bdev_sb);
+        reload_device_map(&dev_map);
     }else{
         dev_map.last = -1; //-1 indicates that the device is virgin
         dev_map.first = -1;
@@ -321,5 +320,5 @@ module_init(singlefilefs_init);
 module_exit(singlefilefs_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Francesco QUaglia <francesco.quaglia@uniroma2.it>");
+MODULE_AUTHOR("Alessandro De Angelis <alessandro.deangelis97@gmail.com>");
 MODULE_DESCRIPTION("SINGLE-FILE-FS");

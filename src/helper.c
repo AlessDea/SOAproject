@@ -1,8 +1,9 @@
-#include <helper.h>
+#include "helper.h"
 
-int reload_device_map(map *m, struct super_block *sb){
+int reload_device_map(map *m){
     struct buffer_head *bh;
 	struct block *blk;
+	struct super_block *sb = my_bdev_sb;
 
  	long fk; //first key
 
@@ -41,11 +42,9 @@ int reload_device_map(map *m, struct super_block *sb){
 
 long get_next_free_block(map *m){
     
-    struct buffer_head *bh;
-	struct block *blk;
-
+	long i;
     // search the first free
-    for(long i = 0; i < NBLOCKS; i++){
+    for(i = 0; i < NBLOCKS; i++){
         if(m->keys[i] == 0){
             __sync_fetch_and_add(&m->keys[i], 1); // atomic block reservation for the write
 			__sync_fetch_and_add(&m->num_of_valid_blocks, 1);
@@ -61,7 +60,6 @@ long get_next_free_block(map *m){
 
     
     return i;
-    
 }
 
 
@@ -79,7 +77,8 @@ long is_block_valid(map *m, long idx){
 
 
 long get_first_valid_block(map *m){
-	for(long i = 0; i < NBLOCKS; i++){
+	long i;
+	for(i = 0; i < NBLOCKS; i++){
 		if(m->keys[i] == 1)
 			return i;
 	}
@@ -90,6 +89,7 @@ long get_next_valid_block(map *m, long idx){
 	struct buffer_head *bh;
 	struct block *blk;
 	long next_idx;
+	struct super_block *sb = my_bdev_sb;
 
 	// get the buffer_head
 	bh = (struct buffer_head *)sb_bread(sb, 2 + idx);
@@ -111,6 +111,7 @@ long get_next_valid_block(map *m, long idx){
 long set_invalid_block(map *m, long idx){
     struct buffer_head *bh, *bh_cur;
 	struct block *blk, *cur_blk;
+	struct super_block *sb = my_bdev_sb;
 
  	long fk; //first key
     fk = m->first;
@@ -158,7 +159,7 @@ long set_invalid_block(map *m, long idx){
 		if(blk->next == idx){
 
             bh_cur = (struct buffer_head *)sb_bread(sb, 2 + idx);
-            if(!bh_nxt){
+            if(!bh_cur){
                 return -EIO;
             }
             cur_blk = (struct block*)bh_cur->b_data;

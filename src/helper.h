@@ -10,10 +10,12 @@
 #include <linux/fs.h>
 #include <linux/types.h>
 #include <linux/srcu.h>
+#include <linux/buffer_head.h>
+
 
 
 /* User Messages Driver */
-//----------------------------------------------------------------
+
 #ifndef NBLOCKS
 #define NBLOCKS 10
 #endif
@@ -45,66 +47,25 @@ struct block{
     long next; //next block according to the order of the delivery of data
     char data[MSG_MAX_SIZE];
 
-    //char padding[(4 * 1024) - sizeof(long) - sizeof(short) - (sizeof(char)*MSG_MAX_SIZE)];
-};
+} __attribute__((packed, aligned(64)));
 
 
 
-/* RCU */
-//----------------------------------------------------------------
+
 #define  AUDIT if(1) //this is a general audit flag
 
 
-//this defines the RCU house keeping period
-#ifndef PERIOD
-#define PERIOD 120
-#endif
-
-
-#define EPOCHS (2) //we have the current and the past epoch only
-
-
-#define MASK 0x8000000000000000
-
-typedef struct insert_ret{
-    long curr;
-    long prev;
-} insert_ret;
-
-typedef struct invalidate_ret{
-    long next;
-    long prev;
-} invalidate_ret;
-
-typedef struct rcu_lst_elem{
-    struct rcu_lst_elem * next;
-    long key; //offset
-    short validity;
-} element;
-
-// #######################################################
 typedef struct device_map{
     long keys[NBLOCKS]; //used to mantain block validity (1)
     long num_of_valid_blocks;
     long first;
     long last; //last valid written block
-} __attribute__((packed)) device_map;
-
-typedef device_map map __attribute__((aligned(64)));
+} __attribute__((packed, aligned(64))) map;
 
 extern map dev_map; /* map of the device */
-// #######################################################
-
-
-
 
 
 /* ------------------------------------------------------------- */
-
-
-#include <linux/types.h>
-#include <linux/fs.h>
-
 
 #define MOD_NAME "SINGLE FILE FS"
 
@@ -162,8 +123,7 @@ struct bdev_status {
     struct srcu_struct rcu;
 };
 
-
-extern struct mutex f_mutex;
+extern struct mutex f_mutex; // for writers synchronization
 
 // file.c
 extern const struct inode_operations onefilefs_inode_ops;
@@ -175,9 +135,15 @@ extern const struct file_operations onefilefs_dir_operations;
 extern struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
 
 extern struct bdev_status dev_status;
-{
-    /* data */
-};
+
+
+int reload_device_map(map *m);
+long get_next_free_block(map *m);
+int device_is_empty(map *m);
+long is_block_valid(map *m, long idx);
+long get_first_valid_block(map *m);
+long get_next_valid_block(map *m, long idx);
+long set_invalid_block(map *m, long idx);
 
 
 #endif //SOAPROJECT_HELPER_H

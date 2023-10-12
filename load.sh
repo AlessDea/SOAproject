@@ -61,12 +61,12 @@ fi
 sudo make mount-fs
 
 # simple user client
-read -p "Do you want to run user client? (y/n)" yn
-case $yn in 
-  [yY] )  chmod u+x usr.sh
-          ./usr.sh;;
-  [nN] )  echo "you can run it with the script usr.sh"
-          exit 0;;
-  * )     echo "invalid response"
-          exit 1;;
-esac
+# read -p "Do you want to run user client? (y/n)" yn
+# case $yn in 
+#  [yY] )  chmod u+x usr.sh
+#          ./usr.sh;;
+#  [nN] )  echo "you can run it with the script usr.sh"
+#          exit 0;;
+#  * )     echo "invalid response"
+#          exit 1;;
+#esac

@@ -1,5 +1,5 @@
 obj-m += singlefilefs.o
-singlefilefs-objs += singlefilefs_src.o file.o dir.o ../rcu_list/rcu-list.o ../scth/scth.o ../scth/newsyscalls.o ../scth/lib/sys_tbl_finder.o ../scth/lib/vtpmo.o
+singlefilefs-objs += singlefilefs_src.o file.o dir.o helper.o ../scth/scth.o ../scth/newsyscalls.o ../scth/lib/sys_tbl_finder.o ../scth/lib/vtpmo.o
 
 NBLOCKS:=10
 DEVNAME:=image

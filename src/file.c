@@ -26,19 +26,17 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     struct block *msg;
     char *tmp;
     short msg_len;
-    size_t tmp_len;
-    //loff_t start_off;
     loff_t read;
     char end_str = '\0';
 
     long start_bindx; //block from which start reading
     loff_t to_read;
 
-    int srcu_idx;
+    int rcu_index;
 
     read = 0;
 
-    atomic_fetch_add(1, &(dev_status.usage)); 
+    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     //check if the device is mounted --> fallo in altro modo
     // if(&dev_map == NULL){
@@ -56,14 +54,14 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //check that *off is within boundaries
     if(*off < 0){
         mutex_unlock(&f_mutex);
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         return 0;
     } 
 
     if(*off >= file_size){ //EOF
         printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
         *off = 0;
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return 0;
     }
@@ -73,7 +71,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     if(device_is_empty(&dev_map)){ 
         printk(KERN_INFO "%s: Empty file", MOD_NAME);
         *off = 0;
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return 0;
     }
@@ -91,14 +89,14 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     start_bindx = BLK_INDX(*off);
 
     //if(!list_is_valid(&dev_map, start_bindx)){
-    if(!is_block_valid(&dev_map, start_bindx)){}
+    if(!is_block_valid(&dev_map, start_bindx)){
         //the starting block is not valid, start from the first valid
         //start_bindx = list_first_valid(&dev_map);
         start_bindx = get_first_valid_block(&dev_map);
         if(start_bindx < 0){
             printk(KERN_INFO "%s: Empty file", MOD_NAME);
             *off = 0;
-            atomic_fetch_sub(1, &(dev_status.usage));
+            __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return 0;
         }
@@ -117,7 +115,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
         if(!bh){
-            atomic_fetch_sub(1, &(dev_status.usage));
+            __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return -EIO;
         }
@@ -140,7 +138,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         tmp = kzalloc(sizeof(char)*(msg_len + 1), GFP_KERNEL); // +1 for '/n'
         if(!tmp){
             printk("%s: kzalloc error, unable to allocate memory for read messages as single file\n", MOD_NAME);
-            atomic_fetch_sub(1, &(dev_status.usage));
+            __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return 0;
         }
@@ -157,7 +155,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
             printk(KERN_INFO "%s: An error occured during the copy of the message from kernel space to user space", MOD_NAME);
             kfree(tmp);
             *off = 0;
-            atomic_fetch_sub(1, &(dev_status.usage));
+            __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return 0;
         }
@@ -168,7 +166,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         //block_to_read = list_next_valid(&dev_map, block_to_read - 2);
         block_to_read = get_next_valid_block(&dev_map, block_to_read - 2);
         printk(KERN_INFO "%s: next block to read: %ld", MOD_NAME, block_to_read);
-        printk(KERN_INFO "%s: to_read %ld", MOD_NAME, to_read);
+        printk(KERN_INFO "%s: to_read %lld", MOD_NAME, to_read);
 
         kfree(tmp);
 
@@ -180,10 +178,10 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //ret = copy_to_user(buf + read + 1, '\0', msg_len);
 
     *off = *off + read;
-    printk(KERN_INFO "%s: last offset position %ld", MOD_NAME, *off);
+    printk(KERN_INFO "%s: last offset position %lld", MOD_NAME, *off);
 
     srcu_read_unlock(&(dev_status.rcu), rcu_index);
-    atomic_fetch_sub(1, &(dev_status.usage));
+    __sync_fetch_and_sub(&(dev_status.usage), 1);
     
     return read;
 
@@ -254,8 +252,8 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
 
 int onefilefs_open(struct inode *pinode, struct file *pfile) {
 
-    if (bdev_status.bdev == NULL) {
-		printk("%s: Block Device not mounted\n", MODNAME);
+    if (dev_status.bdev == NULL) {
+		printk("%s: Block Device not mounted\n", MOD_NAME);
 		return -ENODEV;
 	}
 
@@ -274,8 +272,8 @@ int onefilefs_open(struct inode *pinode, struct file *pfile) {
 
 int onefilefs_release(struct inode *pinode, struct file *pfile) {
 
-    if (bdev_status.bdev == NULL) {
-		printk("%s: Block Device not mounted\n", MODNAME);
+    if (dev_status.bdev == NULL) {
+		printk("%s: Block Device not mounted\n", MOD_NAME);
 		return -ENODEV;
 	}
 

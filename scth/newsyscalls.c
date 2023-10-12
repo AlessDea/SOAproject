@@ -40,7 +40,7 @@
 #include <asm/apic.h>
 #include <asm/io.h>
 #include <linux/syscalls.h>
-#include <linux/buffer_head.h>
+//#include <linux/buffer_head.h>
 
 #include "include/scth.h"
 #include "../src/helper.h"
@@ -107,11 +107,11 @@ int update_file_size(int size){
 
 
     // increment usage count
-    atomic_fetch_add(1, &(dev_status.usage)); 
+    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENODEV;
     }
 
@@ -119,12 +119,12 @@ int update_file_size(int size){
     /* check if size is less-equal of the block size */
     // if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
     if((size) >= MSG_MAX_SIZE){  // = doesn't permit to store the '/0' at the end
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENOMEM; 
     }
 
     if(size <= 0){
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENOMEM; 
     }
 
@@ -137,17 +137,13 @@ int update_file_size(int size){
     // }
 
 
-    ret = mutex_lock(&f_mutex);
-    if (ret != 0) {
-        printk(KERN_CRIT "%s: mutex_lock ERROR\n", MODNAME);
-        atomic_fetch_sub(1, &(dev_status.usage));
-        return -EBUSY;
-    }
+    mutex_lock(&f_mutex);
+    
 
     key = get_next_free_block(&dev_map);
     if(key < 0){
         printk(KERN_INFO "%s: thread %d request for put_data sys_call error\n",MOD_NAME,current->pid);
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         mutex_unlock(&f_mutex);
         return -ENOMEM;
     }
@@ -158,7 +154,7 @@ int update_file_size(int size){
         // update the previouse block's next field with this one
         bh = (struct buffer_head *)sb_bread(my_bdev_sb, dev_map.last + 2); // +2 for the superblock and inode blocks
         if(!bh){
-            atomic_fetch_sub(1, &(dev_status.usage));
+            __sync_fetch_and_sub(&(dev_status.usage), 1);
             mutex_unlock(&f_mutex);
             return -EIO;
         }
@@ -184,7 +180,7 @@ int update_file_size(int size){
     addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
      if(!addr){
         printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         mutex_unlock(&f_mutex);
         return -EIO;
     }
@@ -193,7 +189,7 @@ int update_file_size(int size){
     blk1 = kzalloc(sizeof(struct block *), GFP_KERNEL);
     if(!blk1){
         printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         mutex_unlock(&f_mutex);
         return -EIO;
     }
@@ -212,7 +208,7 @@ int update_file_size(int size){
     // get the buffer_head
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, key + 2); // +2 for the superblock and inode blocks
     if(!bh){
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         mutex_unlock(&f_mutex);
         return -EIO;
     }
@@ -232,7 +228,7 @@ int update_file_size(int size){
     // kfree(blk);
     // kfree(blk1);
     kfree(addr);
-    atomic_fetch_sub(1, &(dev_status.usage));
+    __sync_fetch_and_sub(&(dev_status.usage), 1);
     mutex_unlock(&f_mutex);
     return key;
 }
@@ -250,7 +246,7 @@ int update_file_size(int size){
     char *addr;
     int ret;
     short to_cpy;
-    int srcu_idx;
+    int rcu_index;
 
 
     //printk(KERN_INFO "%s: thread %d requests a get_data sys_call\n",MOD_NAME,current->pid);
@@ -262,11 +258,11 @@ int update_file_size(int size){
     //off = BLK_INDX(offset);
 
     // increment usage count
-    atomic_fetch_add(1, &(dev_status.usage)); 
+    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENODEV;
     }
 
@@ -274,7 +270,7 @@ int update_file_size(int size){
 
     if(is_block_valid(&dev_map, offset) == 0){
         printk(KERN_INFO "%s: thread %d request for get_data sys_call error: the block is not available\n", MOD_NAME, current->pid);
-        atomic_fetch_sub(1, &(dev_status.usage)); 
+        __sync_fetch_and_sub(&(dev_status.usage), 1); 
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return -ENODATA;
     }
@@ -282,7 +278,7 @@ int update_file_size(int size){
     // get the buffer_head
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset+2);
     if(!bh){
-        atomic_fetch_sub(1, &(dev_status.usage)); 
+        __sync_fetch_and_sub(&(dev_status.usage), 1); 
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return -EIO;
     }
@@ -311,7 +307,7 @@ int update_file_size(int size){
 
     brelse(bh);
     kfree(addr);
-    atomic_fetch_sub(1, &(dev_status.usage));
+    __sync_fetch_and_sub(&(dev_status.usage), 1);
 
     printk(KERN_INFO "%s: thread %d request for get_data sys_call success\n",MOD_NAME,current->pid);
 
@@ -328,14 +324,14 @@ int update_file_size(int size){
 
     struct buffer_head *bh;
     struct block *blk;
-    struct invalidate_ret ret;
+    long ret;
 
     // increment usage count
-    atomic_fetch_add(1, &(dev_status.usage)); 
+    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENODEV;
     }
     
@@ -348,18 +344,13 @@ int update_file_size(int size){
     //     return 0; //already invalid
     // } controllare se è valido non serve, lo fa già remove il controllo
 
-    ret = mutex_lock(&f_mutex);
-    if (ret != 0) {
-        printk(KERN_CRIT "%s: mutex_lock ERROR\n", MODNAME);
-        atomic_fetch_sub(1, &(dev_status.usage));
-        return -EBUSY;
-    }
+    mutex_lock(&f_mutex);
 
     // check if the block is valid
     if(is_block_valid(&dev_map, offset) == 0){
         printk(KERN_INFO "%s: thread %d request for get_data sys_call error: the block is not available\n", MOD_NAME, current->pid);
-        atomic_fetch_sub(1, &(dev_status.usage)); 
-        srcu_read_unlock(&(dev_status.rcu), rcu_index);
+        __sync_fetch_and_sub(&(dev_status.usage), 1); 
+        mutex_unlock(&f_mutex);
         return -ENODATA;
     }
 
@@ -369,16 +360,16 @@ int update_file_size(int size){
     ret = set_invalid_block(&dev_map, offset);
     if(ret < 0){
         printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         mutex_unlock(&f_mutex);
         return 0; //already invalid
     }
     
 
-    // update the metadata of the invalitated block
+    // update the metadata of the invalitat block
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset + 2);
     if(!bh){
-        atomic_fetch_sub(1, &(dev_status.usage));
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
         mutex_unlock(&f_mutex);
         return -EIO;
     }
@@ -394,7 +385,7 @@ int update_file_size(int size){
 
     printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call on block %d success\n",MOD_NAME,current->pid, offset);
 
-    atomic_fetch_sub(1, &(dev_status.usage));
+    __sync_fetch_and_sub(&(dev_status.usage), 1);
     mutex_unlock(&f_mutex);
     return 0;
 
