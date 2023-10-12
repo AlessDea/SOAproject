@@ -84,7 +84,7 @@ typedef struct rcu_lst_elem{
 
 // #######################################################
 typedef struct device_map{
-    int keys[NBLOCKS]; //used to mantain block validity (1)
+    long keys[NBLOCKS]; //used to mantain block validity (1)
     long num_of_valid_blocks;
     long first;
     long last; //last valid written block

@@ -69,7 +69,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     }
 
     //check if there is something in the device
-    if(rcu_list_get_first_valid(&dev_map) == -1){
+    //if(rcu_list_get_first_valid(&dev_map) == -1){
+    if(device_is_empty(&dev_map)){ 
         printk(KERN_INFO "%s: Empty file", MOD_NAME);
         *off = 0;
         atomic_fetch_sub(1, &(dev_status.usage));
@@ -89,9 +90,18 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //check from whick block need
     start_bindx = BLK_INDX(*off);
 
-    if(!list_is_valid(&dev_map, start_bindx)){
+    //if(!list_is_valid(&dev_map, start_bindx)){
+    if(!is_block_valid(&dev_map, start_bindx)){}
         //the starting block is not valid, start from the first valid
-        start_bindx = list_first_valid(&dev_map);
+        //start_bindx = list_first_valid(&dev_map);
+        start_bindx = get_first_valid_block(&dev_map);
+        if(start_bindx < 0){
+            printk(KERN_INFO "%s: Empty file", MOD_NAME);
+            *off = 0;
+            atomic_fetch_sub(1, &(dev_status.usage));
+            srcu_read_unlock(&(dev_status.rcu), rcu_index);
+            return 0;
+        }
     }
 
     //blks_to_read = BLK_INDX(*off + len) - start_bindx; //number of blocks to read
@@ -155,7 +165,8 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         read += (msg_len + 1 - ret);
         to_read -= (msg_len + 1 - ret);
 
-        block_to_read = list_next_valid(&dev_map, block_to_read - 2);
+        //block_to_read = list_next_valid(&dev_map, block_to_read - 2);
+        block_to_read = get_next_valid_block(&dev_map, block_to_read - 2);
         printk(KERN_INFO "%s: next block to read: %ld", MOD_NAME, block_to_read);
         printk(KERN_INFO "%s: to_read %ld", MOD_NAME, to_read);
 
@@ -178,139 +189,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
 }
 
-
-// ssize_t onefilefs_read2(struct file *filp, char __user *buf, size_t len, loff_t *off) {
-
-//     struct buffer_head *bh = NULL;
-//     struct inode * the_inode = filp->f_inode;
-//     loff_t file_size = the_inode->i_size;
-
-//     loff_t to_read;
-//     loff_t read;
-
-//     short msg_len;
-//     long blks_to_read;
-
-//     char *msg;
-//     char *tmp_buf;
-//     char *curr;
-
-//     long start_bindx; //block from which start reading
-//     short start_inb_off;
-//     long next_blk;
-
-//     int ret;
-
-
-//     //check if there is something in the device
-//     if(rcu_list_get_first_valid(&dev_map) == -1){
-//         printk(KERN_INFO "%s: Empty file", MOD_NAME);
-//         *off = 0;
-//         return 0;
-//     }
-
-//     if(*off >= file_size){ //EOF
-//         printk(KERN_INFO "%s: Offset out of boundaries", MOD_NAME);
-//         *off = 0;
-//         return 0;
-//     }
-
-//     // since the data of the block device has to be accessed like a file,
-//     // off is the offset inside the file, the starting point from where to read, not the offset (index) of the block. 
-//     // check if it is in boundaries
-//     if(*off + len > file_size){
-//         to_read = file_size - *off;
-//     }else{
-//         to_read = len;
-//     }
-
-
-//     //check from whick block need to start reading
-//     start_bindx = BLK_INDX(*off);
-
-//     //start_inb_off = IN_BLOCK_OFF(*off); //offset inside the block, lecito? no: l'offset è meglio che venga usato solo per indicare il blocco, quindi se è all'interno del blocco si fa partire dall'inizio di quel blocco
-    
-//     if(!list_is_valid(&dev_map, start_bindx)){
-//         //the starting block is not valid, start from the next first valid
-//         start_bindx = list_next_valid(&dev_map, start_bindx);
-//         start_inb_off = 0;
-//     }
-
-
-//     blks_to_read = BLK_INDX(*off + len) - start_bindx; //number of blocks to read
-
-//     //check if the number of blocks to read is <= than the actual number of valid blocks
-//     if(blks_to_read < dev_map.num_of_valid_blocks){
-//         blks_to_read = dev_map.num_of_valid_blocks;
-//     }
-    
-
-//     tmp_buf = kzalloc(sizeof(char)*to_read);
-//     if(!tmp_buf){
-//         printk("%s: kzalloc error, unable to allocate memory for read messages as single file\n", MOD_NAME);
-//         return -1;
-//     }
-//     curr = tmp_buf;
-
-//     read = 0;
-//     next_blk = start_bindx + 2;
-//     while(to_read > 0){
-
-//         bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, next_blk);
-//         if(!bh){
-//             return -EIO;
-//         }
-
-//         msg = (struct block *)bh->b_data;
-//         msg_len = MSG_LEN(msg->metadata);
-
-//         // msg += start_inb_off;
-//         // msg_len -= start_inb_off;
-
-//         if(msg_len > len){
-//             msg_len = len;
-//         }
-
-//         memcpy(curr, msg->data, msg_len);
-//         curr[msg_len] = '\n';
-
-//         curr += msg_len*sizeof(char) + 1; //move the pointer (+1 for the '\n')
-
-//         to_read -= msg_len + 1;
-//         read += msg_len + 1;
-
-//         next_blk = list_next_valid(&dev_map, next_blk) + 2;
-
-//     }
-
-//     bh = NULL;
-
-//     ret = copy_to_user(buf, tmp_buf, read);
-
-//     kfree(tmp_buf);
-
-//     *off += read;
-
-//     return read - ret;
-
-// }
-
-
-
-// /* the write operation must do nothing so it's implementation it's dummy, I need it just for reject the write request */
-// ssize_t onefilefs_write(struct file *pfile, const char __user *buffer, size_t length, loff_t *offset) {
-//     struct inode * the_inode = pfile->f_inode;
-//     uint64_t file_size = the_inode->i_size;
-
-//     printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, length, *offset, file_size);
-
-//     //set the offset to 0 again (?)
-//     *offset = 0;
-
-//     //make sure the write operation returns a error value
-
-//     return -EINTR; 
-// }   
 
 
 struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child_dentry, unsigned int flags) {

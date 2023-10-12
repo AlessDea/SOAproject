@@ -8,6 +8,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/version.h>
+#include <linux/srcu.h>
 #include "../scth/include/scth.h"
 
 
@@ -26,7 +27,8 @@ int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
 
 
 
-list dev_map; /* map of the device */
+//list dev_map; 
+map dev_map;/* map of the device */
 struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
 struct bdev_status dev_status __attribute__((aligned(64))) = {0, NULL};
 
@@ -136,6 +138,8 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     mark_buffer_dirty(bh);
     brelse(bh);
 
+    cleanup_srcu_struct(&(dev_status.rcu)); // reset srcu_struct
+
     kill_block_super(s);
     printk(KERN_INFO "%s: singlefilefs unmount succesful.\n",MOD_NAME);
     return;
@@ -166,16 +170,22 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     dev_status.usage = 0;
     mutex_init(&f_mutex);
 
+    ret = init_srcu_struct(&(dev_status.rcu));
+    if (ret != 0) {
+        printk(KERN_CRIT "%s: errore durante il montaggio del filesystem", MODNAME);
+        return ERR_PTR(-ENOMEM);
+    }
+
     // ################################# REMOVE #######################################
     /* create the map of the empty device */
-    list_init(&dev_map);
+    //list_init(&dev_map);
     // insert the head
-    rcu_head = kmalloc(sizeof(element), GFP_KERNEL);
-    rcu_head->validity = -1;
-    rcu_head->key = -1;
-    rcu_head->next = NULL;
+    // rcu_head = kmalloc(sizeof(element), GFP_KERNEL);
+    // rcu_head->validity = -1;
+    // rcu_head->key = -1;
+    // rcu_head->next = NULL;
 
-    dev_map.head = rcu_head;
+    //dev_map.head = rcu_head;
     // ################################# END REMOVE #######################################
 
     /* check if in the device there are valid blocks, in case retrieve them and create the map */
@@ -188,7 +198,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     sb = (struct onefilefs_sb_info*)bh->b_data;
 
-    dev_map.first = sb->first_key;
+    //dev_map.first = sb->first_key;
 
     last_k = sb->last_key;
     first_k = sb->first_key;
@@ -198,12 +208,13 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     if(last_k > -1){
         dev_map.last = last_k;
         dev_map.first = first_k;
-        printk(KERN_INFO "%s: the device was found written: starting up with the old one (last key %ld, first key %ld)\n", MOD_NAME, dev_map.last, dev_map.first);
-        list_reload(&dev_map, my_bdev_sb);
+        printk(KERN_INFO "%s: the device was found written: starting up with the old data (last key %ld, first key %ld)\n", MOD_NAME, dev_map.last, dev_map.first);
+        //list_reload(&dev_map, my_bdev_sb);
+        reload_device_map(&dev_map, my_bdev_sb);
     }else{
         dev_map.last = -1; //-1 indicates that the device is virgin
         dev_map.first = -1;
-        printk(KERN_INFO "%s: the device was found virgin: starting up with fresh data\n", MOD_NAME);
+        printk(KERN_INFO "%s: the device was found virgin: starting up with empty device\n", MOD_NAME);
     }
 
     return ret;

@@ -1,6 +1,6 @@
 #include <helper.h>
 
-int reload_device_map(map *m){
+int reload_device_map(map *m, struct super_block *sb){
     struct buffer_head *bh;
 	struct block *blk;
 
@@ -65,30 +65,84 @@ long get_next_free_block(map *m){
 }
 
 
-long get_block_boundaries(map *m){
-    struct buffer_head *bh;
-	struct block *blk;
-
-    // ...
+int device_is_empty(map *m){
+    if(m->num_of_valid_blocks > 0)
+		return 0;
+	return 1;
 }
 
 
 
-int is_block_valid(map *m, long idx){
+long is_block_valid(map *m, long idx){
     return m->keys[idx];
 }
 
 
+long get_first_valid_block(map *m){
+	for(long i = 0; i < NBLOCKS; i++){
+		if(m->keys[i] == 1)
+			return i;
+	}
+	return -1;
+}
 
-int set_invalid_block(map *m, long idx){
-    struct buffer_head *bh, *bh_nxt;
-	struct block *blk, *blk_nxt;
+long get_next_valid_block(map *m, long idx){
+	struct buffer_head *bh;
+	struct block *blk;
+	long next_idx;
+
+	// get the buffer_head
+	bh = (struct buffer_head *)sb_bread(sb, 2 + idx);
+	if(!bh){
+		return -EIO;
+	}
+
+	blk = (struct block*)bh->b_data;
+
+	next_idx = blk->next;
+
+	brelse(bh);
+	blk = NULL;
+
+	return next_idx;
+}
+
+
+long set_invalid_block(map *m, long idx){
+    struct buffer_head *bh, *bh_cur;
+	struct block *blk, *cur_blk;
 
  	long fk; //first key
     fk = m->first;
 
-    long next_key;
+	if(fk < 0)
+		return fk;
 
+	// check if the block to delete is the first one
+	if(idx == m->first){
+		// get the buffer_head
+		bh = (struct buffer_head *)sb_bread(sb, 2 + fk);
+		if(!bh){
+			return -EIO;
+		}
+
+		blk = (struct block*)bh->b_data;
+
+		m->first = (blk->next != -2) ? blk->next : -1; // update the new first block
+
+		mark_buffer_dirty(bh);
+		
+		brelse(bh);
+        bh = NULL;
+		blk = NULL;
+
+		m->last = (idx == m->last) ? -1 : m->last; // update the map with the new last block if the removed one was the last
+
+		return 0;
+
+	}
+
+	// for the other cases get the previouse block of the block idx
     do{
 
 		// get the buffer_head
@@ -103,29 +157,38 @@ int set_invalid_block(map *m, long idx){
 
 		if(blk->next == idx){
 
-            bh_nxt = (struct buffer_head *)sb_bread(sb, 2 + idx);
+            bh_cur = (struct buffer_head *)sb_bread(sb, 2 + idx);
             if(!bh_nxt){
                 return -EIO;
             }
-            blk_nxt = (struct block*)bh_nxt->b_data;
+            cur_blk = (struct block*)bh_cur->b_data;
 
-            blk->next = blk_nxt->next;
+            blk->next = cur_blk->next;
+
+			mark_buffer_dirty(bh);
 
             __sync_fetch_and_sub(&m->keys[idx], 1); // atomic block reservation for the write
 			__sync_fetch_and_sub(&m->num_of_valid_blocks, 1);
 
-            brelse(bh_nxt);
-            bh_nxt = NULL;
-	        blk_nxt = NULL;
+            brelse(bh_cur);
+            bh_cur = NULL;
+	        cur_blk = NULL;
+
 
             break;
         }
+
+		fk = blk->next;
 
 		brelse(bh);
         bh = NULL;
 		blk = NULL;
 
-	}while (fk != -1);
+	}while (fk >= 0);
+
+	// update the map with the new last block if the removed one was the last
+	if(idx == m->last)
+		m->last = fk;
     
     return fk;
 

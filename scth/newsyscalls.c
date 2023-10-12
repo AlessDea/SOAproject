@@ -118,9 +118,14 @@ int update_file_size(int size){
 
     /* check if size is less-equal of the block size */
     // if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
-    if((size) >= MSG_MAX_SIZE){  //+1 for the null terminato
+    if((size) >= MSG_MAX_SIZE){  // = doesn't permit to store the '/0' at the end
         atomic_fetch_sub(1, &(dev_status.usage));
-        return -ENOMEM; // = doesn't permit to store the '/0' at the end
+        return -ENOMEM; 
+    }
+
+    if(size <= 0){
+        atomic_fetch_sub(1, &(dev_status.usage));
+        return -ENOMEM; 
     }
 
 
@@ -149,7 +154,6 @@ int update_file_size(int size){
 
 
     if (dev_map.last != -1){
-   
 
         // update the previouse block's next field with this one
         bh = (struct buffer_head *)sb_bread(my_bdev_sb, dev_map.last + 2); // +2 for the superblock and inode blocks
@@ -171,8 +175,10 @@ int update_file_size(int size){
 
     }
 
-    // update last key in the device map
+    // update last key and first key in the device map
     dev_map.last = key;
+    if(dev_map.first == -1)
+        dev_map.first = key;
 
 
     addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
@@ -305,8 +311,10 @@ int update_file_size(int size){
 
     brelse(bh);
     kfree(addr);
+    atomic_fetch_sub(1, &(dev_status.usage));
 
     printk(KERN_INFO "%s: thread %d request for get_data sys_call success\n",MOD_NAME,current->pid);
+
     return to_cpy;
 
 }
@@ -347,11 +355,19 @@ int update_file_size(int size){
         return -EBUSY;
     }
 
+    // check if the block is valid
+    if(is_block_valid(&dev_map, offset) == 0){
+        printk(KERN_INFO "%s: thread %d request for get_data sys_call error: the block is not available\n", MOD_NAME, current->pid);
+        atomic_fetch_sub(1, &(dev_status.usage)); 
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
+        return -ENODATA;
+    }
+
     synchronize_srcu(&(dev_status.rcu));
 
     // update the device map setting invalid the block at offset
     ret = set_invalid_block(&dev_map, offset);
-    if(ret == -1){
+    if(ret < 0){
         printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
         atomic_fetch_sub(1, &(dev_status.usage));
         mutex_unlock(&f_mutex);
@@ -359,8 +375,7 @@ int update_file_size(int size){
     }
     
 
-    // at this point the upcoming reads operations don't find the invalidated block in the list
-    // update the metadata of that block
+    // update the metadata of the invalitated block
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset + 2);
     if(!bh){
         atomic_fetch_sub(1, &(dev_status.usage));
