@@ -45,6 +45,8 @@
 #include "include/scth.h"
 #include "../src/helper.h"
 
+#define AUDIT if(1)
+
 int update_file_size(int size){
     struct inode *the_inode = NULL;
     struct super_block *sb = my_bdev_sb;
@@ -57,12 +59,15 @@ int update_file_size(int size){
     if (!the_inode)
         return -ENOMEM;
 
+    printk(KERN_INFO "%s: got inode\n",MOD_NAME);
+
     //already cached inode - modify its size
     if(!(the_inode->i_state & I_NEW)){
         the_inode->i_size += size;
     }
+    printk(KERN_INFO "%s: modify the inode\n",MOD_NAME);
 
-    // now modify the size also on the specific inode stored in the second block of the device (for consistency)
+    //now modify the size also on the specific inode stored in the second block of the device (for consistency)
 
     bh = (struct buffer_head *)sb_bread(sb, SINGLEFILEFS_INODES_BLOCK_NUMBER );
     if(!bh){
@@ -71,14 +76,18 @@ int update_file_size(int size){
     }
     FS_specific_inode = (struct onefilefs_inode*)bh->b_data;
     FS_specific_inode->file_size += size;
+    printk(KERN_INFO "%s: marking the buffer dirty\n",MOD_NAME);
 
     mark_buffer_dirty(bh);
     brelse(bh);
 
+    printk(KERN_INFO "%s: updated file size\n",MOD_NAME);
+    // unlock_new_inode(the_inode);
+
     return 0;
 }
 
-#define AUDIT if(1)
+
 
 
 /* here declare the three new syscall */
@@ -94,7 +103,7 @@ int update_file_size(int size){
     struct block *blk, *blk1;
     struct buffer_head *bh;
     char* addr;
-    int ret, ret1;
+    int ret1;
     long key;
 
     printk(KERN_INFO "%s: thread %d requests a put_data sys_call\n",MOD_NAME,current->pid);
@@ -136,9 +145,9 @@ int update_file_size(int size){
     //     return -ENOMEM;
     // }
 
-
+    printk(KERN_INFO "%s: getting mutex\n",MOD_NAME);
     mutex_lock(&f_mutex);
-    
+    printk(KERN_INFO "%s: got mutex\n",MOD_NAME);
 
     key = get_next_free_block(&dev_map);
     if(key < 0){
@@ -201,8 +210,9 @@ int update_file_size(int size){
     blk1->next = -1; // the next of the last inserted block is always null
     memcpy(blk1->data, addr, size+1);
 
-
+    printk(KERN_INFO "%s: synchronizing srcu\n",MOD_NAME);
     synchronize_srcu(&(dev_status.rcu));
+    printk(KERN_INFO "%s: synchronized srcu\n",MOD_NAME);
 
 
     // get the buffer_head
@@ -214,10 +224,10 @@ int update_file_size(int size){
     }
 
     memcpy(bh->b_data, (char *)blk1, sizeof(struct block));
-
+    printk(KERN_INFO "%s: copied in bh\n",MOD_NAME);
     mark_buffer_dirty(bh);
     brelse(bh);
-
+    printk(KERN_INFO "%s: written the block\n",MOD_NAME);
     
     //+1 for the null terminator which become a \n in the read operation
     //when a read is performed, with cat for example, the buffer has len as the file, so we need
@@ -229,7 +239,9 @@ int update_file_size(int size){
     // kfree(blk1);
     kfree(addr);
     __sync_fetch_and_sub(&(dev_status.usage), 1);
+    printk(KERN_INFO "%s: releasing mutex\n",MOD_NAME);
     mutex_unlock(&f_mutex);
+    printk(KERN_INFO "%s: released mutex\n",MOD_NAME);
     return key;
 }
 

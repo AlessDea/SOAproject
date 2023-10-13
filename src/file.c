@@ -33,7 +33,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     loff_t to_read;
 
     int rcu_index;
-
+    
     read = 0;
 
     __sync_fetch_and_add(&(dev_status.usage), 1); 
@@ -50,11 +50,13 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //*off can be changed concurrently
     //add synchronization if you need it for any reason
     rcu_index = srcu_read_lock(&(dev_status.rcu));
-    
+
+
     //check that *off is within boundaries
     if(*off < 0){
         mutex_unlock(&f_mutex);
         __sync_fetch_and_sub(&(dev_status.usage), 1);
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return 0;
     } 
 

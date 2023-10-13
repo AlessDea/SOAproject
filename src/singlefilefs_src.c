@@ -125,6 +125,11 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
 
     //list_free(&dev_map);
 
+    if(dev_status.usage > 0){
+        printk(KERN_INFO "%s: Unmount process stopped. Device is still in use! \n",MOD_NAME);
+        return;
+    }
+
     bh = sb_bread(s, SB_BLOCK_NUMBER);
     if(!bh){
 	    return;
@@ -153,6 +158,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     int last_k, first_k;
     struct onefilefs_sb_info *sb;
     struct buffer_head *bh;
+    int srcu_ret;
 
 
     printk(KERN_INFO "%s: mounting", MOD_NAME);
@@ -169,8 +175,8 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     dev_status.usage = 0;
     mutex_init(&f_mutex);
 
-    ret = init_srcu_struct(&(dev_status.rcu));
-    if (ret != 0) {
+    srcu_ret = init_srcu_struct(&(dev_status.rcu));
+    if (srcu_ret != 0) {
         printk(KERN_CRIT "%s: error mounting onefilefs\n", MOD_NAME);
         return ERR_PTR(-ENOMEM);
     }
