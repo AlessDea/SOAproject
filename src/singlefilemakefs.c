@@ -13,12 +13,6 @@
 #include "singlefilefs.h"
 
 
-
-int retrieve_dev_content(int fd){
-
-}
-
-
 /*
 	This makefs will write the following information onto the disk
 	- BLOCK 0, superblock;
@@ -55,6 +49,7 @@ int main(int argc, char *argv[])
 	sb.block_size = DEFAULT_BLOCK_SIZE;
 	sb.last_key = -1;
 	sb.first_key = -1;
+	sb.f_size = 0;
 
 	ret = write(fd, (char *)&sb, sizeof(sb));
 
@@ -94,19 +89,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	printf("Padding in the inode block written sucessfully.\n");
-
-
-	//write file datablock
-/*
-    nbytes = strlen(file_body);
-	ret = write(fd, file_body, nbytes);
-	if (ret != nbytes) {
-		printf("Writing file datablock has failed.\n");
-		close(fd);
-		return -1;
-	}
-	printf("File datablock has been written succesfully.\n");
-*/
 
 	close(fd);
 

@@ -20,12 +20,12 @@
 #define NBLOCKS 10
 #endif
 
+#define MAX_NBLOCKS 100000
+
 #define BLOCK_SSIZE 4096 /* size in bytes of each block */
-#define METADATA_SIZE (sizeof(short) + sizeof(long)) /* metadata size (4096 - X) */
-#define MSG_MAX_SIZE BLOCK_SSIZE - METADATA_SIZE /* (X) block reserved space for message */
 
 #define DEVICE_SIZE (NBLOCKS * BLOCK_SSIZE)
-#define BLK_INDX(off) off/MSG_MAX_SIZE /* from an offset return the index of the block. Needed if the offset is expressed not as multiple of block size */
+#define BLK_INDX(off) (off/MSG_MAX_SIZE) /* from an offset return the index of the block. Needed if the offset is expressed not as multiple of block size */
 #define IN_BLOCK_OFF(off) off%MSG_MAX_SIZE /* starting off inside the message */
 
 #define GET_BLK_DATA(b) (b + METADATA_SIZE)
@@ -43,9 +43,9 @@
 
 /* the struct of each block */
 struct block{
-    short metadata;
+    short metadata; //(valid + len)
     long next; //next block according to the order of the delivery of data
-    char data[MSG_MAX_SIZE];
+    char data[BLOCK_SSIZE - (sizeof(short) + sizeof(long))];
 
 } __attribute__((packed, aligned(64)));
 
@@ -60,6 +60,7 @@ typedef struct device_map{
     long num_of_valid_blocks;
     long first;
     long last; //last valid written block
+    long size;
 } __attribute__((packed, aligned(64))) map;
 
 extern map dev_map; /* map of the device */
@@ -110,9 +111,10 @@ struct onefilefs_sb_info {
     uint64_t block_size;
     long first_key;
     long last_key;
+    long f_size;  //TODO: riportare in consistenza e aggiornare ad ogni scrittura
 
     //padding to fit into a single block
-    char padding[(4 * 1024) - (3 * sizeof(uint64_t)) - (2 * sizeof(long))];
+    char padding[(4 * 1024) - (3 * sizeof(uint64_t)) - (3 * sizeof(long))];
 };
 
 
@@ -125,12 +127,16 @@ struct bdev_status {
 
 extern struct mutex f_mutex; // for writers synchronization
 
+extern struct mutex seq_read_mutex; // for sequence read calls like cat
+
+
 // file.c
 extern const struct inode_operations onefilefs_inode_ops;
 extern const struct file_operations onefilefs_file_operations;
 
 // dir.c
 extern const struct file_operations onefilefs_dir_operations;
+
 
 extern struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
 
@@ -144,6 +150,7 @@ long is_block_valid(map *m, long idx);
 long get_first_valid_block(map *m);
 long get_next_valid_block(map *m, long idx);
 long set_invalid_block(map *m, long idx);
+long get_higher_valid_blk_indx(map *m);
 
 
 #endif //SOAPROJECT_HELPER_H

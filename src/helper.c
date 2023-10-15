@@ -76,14 +76,33 @@ long is_block_valid(map *m, long idx){
 }
 
 
+// long get_first_valid_block(map *m){
+// 	long i;
+// 	for(i = 0; i < NBLOCKS; i++){
+// 		if(m->keys[i] == 1)
+// 			return i;
+// 	}
+// 	return -1;
+// }
+
+
 long get_first_valid_block(map *m){
-	long i;
-	for(i = 0; i < NBLOCKS; i++){
-		if(m->keys[i] == 1)
-			return i;
-	}
-	return -1;
+	return m->first;
 }
+
+
+long get_higher_valid_blk_indx(map *m){
+	long i;
+	long max = -1;
+	for(i = 0; i < NBLOCKS; i++){
+		if(m->keys[i] == 1 && i > max)
+			max = i;
+	}
+	return max;
+}
+
+
+
 
 long get_next_valid_block(map *m, long idx){
 	struct buffer_head *bh;

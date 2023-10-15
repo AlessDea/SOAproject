@@ -69,15 +69,15 @@ int update_file_size(int size){
 
     //now modify the size also on the specific inode stored in the second block of the device (for consistency)
 
-    bh = (struct buffer_head *)sb_bread(sb, SINGLEFILEFS_INODES_BLOCK_NUMBER );
+    bh = (struct buffer_head *)sb_bread(sb, SINGLEFILEFS_INODES_BLOCK_NUMBER);
     if(!bh){
         iput(the_inode);
         return -EIO;
     }
     FS_specific_inode = (struct onefilefs_inode*)bh->b_data;
     FS_specific_inode->file_size += size;
-    printk(KERN_INFO "%s: marking the buffer dirty\n",MOD_NAME);
 
+    printk(KERN_INFO "%s: marking the buffer dirty\n",MOD_NAME);
     mark_buffer_dirty(bh);
     brelse(bh);
 
@@ -115,8 +115,7 @@ int update_file_size(int size){
      * */
 
 
-    // increment usage count
-    __sync_fetch_and_add(&(dev_status.usage), 1); 
+    
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
@@ -124,10 +123,12 @@ int update_file_size(int size){
         return -ENODEV;
     }
 
+    // increment usage count
+    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     /* check if size is less-equal of the block size */
     // if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
-    if((size) >= MSG_MAX_SIZE){  // = doesn't permit to store the '/0' at the end
+    if((size) >= BLOCK_SSIZE - (sizeof(short) + sizeof(long))){  // = doesn't permit to store the '/0' at the end
         __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENOMEM; 
     }
@@ -186,7 +187,7 @@ int update_file_size(int size){
         dev_map.first = key;
 
 
-    addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
+    addr = kzalloc(sizeof(char)*(BLOCK_SSIZE - (sizeof(short) + sizeof(long))), GFP_KERNEL);
      if(!addr){
         printk(KERN_INFO "%s: kzalloc error\n",MOD_NAME);
         __sync_fetch_and_sub(&(dev_status.usage), 1);
@@ -232,7 +233,8 @@ int update_file_size(int size){
     //+1 for the null terminator which become a \n in the read operation
     //when a read is performed, with cat for example, the buffer has len as the file, so we need
     //space for the \n for each message
-    update_file_size(size);
+    //update_file_size(size);
+    dev_map.size += size;
     printk(KERN_INFO "%s: thread %d request for put_data sys_call success\n",MOD_NAME,current->pid);
 
     // kfree(blk);
@@ -269,14 +271,16 @@ int update_file_size(int size){
 
     //off = BLK_INDX(offset);
 
-    // increment usage count
-    __sync_fetch_and_add(&(dev_status.usage), 1); 
+     
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
         __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENODEV;
     }
+
+    // increment usage count
+    __sync_fetch_and_add(&(dev_status.usage), 1);
 
     rcu_index = srcu_read_lock(&(dev_status.rcu));
 
@@ -299,7 +303,7 @@ int update_file_size(int size){
 
     len = MSG_LEN(blk->metadata);
 
-    if(size >= MSG_MAX_SIZE) //too much 
+    if(size >= BLOCK_SSIZE - (sizeof(short) + sizeof(long))) //too much 
         to_cpy = len;
     else if(size >= len)
         to_cpy = len;
@@ -308,7 +312,7 @@ int update_file_size(int size){
 
     //addr = (void*)get_zeroed_page(GFP_KERNEL);
 
-    addr = kzalloc(sizeof(char)*MSG_MAX_SIZE, GFP_KERNEL);
+    addr = kzalloc(sizeof(char)*(BLOCK_SSIZE - (sizeof(short) + sizeof(long))), GFP_KERNEL);
 
     memcpy((char*)addr, (char*)blk->data, to_cpy+1);
     addr[to_cpy] = 0x00;
@@ -338,14 +342,15 @@ int update_file_size(int size){
     struct block *blk;
     long ret;
 
-    // increment usage count
-    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
         __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENODEV;
     }
+
+    // increment usage count
+    __sync_fetch_and_add(&(dev_status.usage), 1); 
     
     printk("%s: thread %d requests a invalidate_data sys_call\n",MOD_NAME,current->pid);
 
@@ -390,7 +395,8 @@ int update_file_size(int size){
     blk->metadata = INVALIDATE(blk->metadata);
     blk->next = -2;
 
-    update_file_size(-(MSG_LEN(blk->metadata) + 1)); // +1 is for the \n that is logically used for the division of the messages
+    //update_file_size(-(MSG_LEN(blk->metadata) + 1)); // +1 is for the \n that is logically used for the division of the messages
+    dev_map.size -= (MSG_LEN(blk->metadata) + 1); 
 
     mark_buffer_dirty(bh);
     brelse(bh);

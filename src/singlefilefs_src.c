@@ -26,15 +26,13 @@ unsigned long new_sys_call_array[] = {0x0, 0x0, 0x0};//please set to sys_put_wor
 int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
 
 
-
-//list dev_map; 
 map dev_map;/* map of the device */
 struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
 struct bdev_status dev_status __attribute__((aligned(64))) = {0, NULL};
 
 
-
 struct mutex f_mutex;
+struct mutex seq_read_mutex;
 
 static struct super_operations singlefilefs_super_ops = {
         //not required
@@ -81,18 +79,18 @@ int singlefilefs_fill_super(struct super_block *sb, void *data, int silent) {
         return -ENOMEM;
     }
 
-    root_inode->i_ino = SINGLEFILEFS_ROOT_INODE_NUMBER;//this is actually 10
+    root_inode->i_ino = SINGLEFILEFS_ROOT_INODE_NUMBER; //this is actually 10
 
     // From kernel 5.12 inode_init_owner gets one more argument: @mnt_userns:	User namespace of the mount the inode was created from
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
     inode_init_owner(sb->s_user_ns, root_inode, NULL, S_IFDIR);//set the root user as owned of the FS root
 #else
-    inode_init_owner(root_inode, NULL, S_IFDIR);//set the root user as owned of the FS root
+    (root_inode, NULL, S_IFDIR);//set the root user as owned of the FS root
 #endif
 
     root_inode->i_sb = sb;
-    root_inode->i_op = &onefilefs_inode_ops;//set our inode operations
-    root_inode->i_fop = &onefilefs_dir_operations;//set our file operations
+    root_inode->i_op = &onefilefs_inode_ops; //set our inode operations
+    root_inode->i_fop = &onefilefs_dir_operations; //set our file operations
     //update access permission
     root_inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR | S_IWGRP | S_IXUSR | S_IXGRP | S_IXOTH;
 
@@ -137,6 +135,7 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     sb_disk = (struct onefilefs_sb_info *)bh->b_data;
     sb_disk->first_key = dev_map.first;
     sb_disk->last_key = dev_map.last;
+    sb_disk->size = dev_map.size;
 
     printk(KERN_INFO "%s: last key was %ld and first key was %ld\n",MOD_NAME,sb_disk->last_key,sb_disk->first_key);
     
@@ -168,30 +167,19 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
         printk(KERN_INFO "%s: error mounting onefilefs", MOD_NAME);
         return ret;
     }else {
-        printk(KERN_INFO "%s: singlefilefs is succesfully mounted on from device %s\n", MOD_NAME, dev_name);
+        printk(KERN_INFO "%s: singlefilefs is succesfully mounted from device %s\n", MOD_NAME, dev_name);
     }
 
     dev_status.bdev = blkdev_get_by_path(dev_name, FMODE_READ|FMODE_WRITE, NULL);
     dev_status.usage = 0;
     mutex_init(&f_mutex);
+    mutex_init(&seq_read_mutex);
 
     srcu_ret = init_srcu_struct(&(dev_status.rcu));
     if (srcu_ret != 0) {
         printk(KERN_CRIT "%s: error mounting onefilefs\n", MOD_NAME);
         return ERR_PTR(-ENOMEM);
     }
-
-    // ################################# REMOVE #######################################
-    /* create the map of the empty device */
-    //list_init(&dev_map);
-    // insert the head
-    // rcu_head = kmalloc(sizeof(element), GFP_KERNEL);
-    // rcu_head->validity = -1;
-    // rcu_head->key = -1;
-    // rcu_head->next = NULL;
-
-    //dev_map.head = rcu_head;
-    // ################################# END REMOVE #######################################
 
     /* check if in the device there are valid blocks, in case retrieve them and create the map */
     // read the sb (block 0) then retrieve the last_key field
@@ -213,14 +201,18 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     if(last_k > -1){
         dev_map.last = last_k;
         dev_map.first = first_k;
+        dev_map.size = sb->f_size;
         printk(KERN_INFO "%s: the device was found written: starting up with the old data (last key %ld, first key %ld)\n", MOD_NAME, dev_map.last, dev_map.first);
         //list_reload(&dev_map, my_bdev_sb);
         reload_device_map(&dev_map);
     }else{
         dev_map.last = -1; //-1 indicates that the device is virgin
         dev_map.first = -1;
+        dev_map.size = 0;
         printk(KERN_INFO "%s: the device was found virgin: starting up with empty device\n", MOD_NAME);
     }
+
+    brelse(bh); //NEW
 
     return ret;
 }

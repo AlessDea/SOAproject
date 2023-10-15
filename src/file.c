@@ -11,16 +11,14 @@
 #include <linux/version.h>
 #include <linux/delay.h>
 
-//TODO: aggiungi l'usage: usalo nella read e nelle syscall PUT e INVALIDATE
-
 //#include "singlefilefs.h"
 #include "helper.h"
 
 ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *off) {
 
     struct buffer_head *bh = NULL;
-    struct inode * the_inode = filp->f_inode;
-    uint64_t file_size = the_inode->i_size;
+    // struct inode * the_inode = filp->f_inode;
+    long file_size = dev_map.size;
     int ret;
     long block_to_read;//index of the block to be read from device
     struct block *msg;
@@ -29,48 +27,53 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     loff_t read;
     char end_str = '\0';
 
-    long start_bindx; //block from which start reading
-    loff_t to_read;
+    loff_t start_bindx; //block from which start reading
+    size_t to_read;
 
     int rcu_index;
     
     read = 0;
 
-    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     //check if the device is mounted --> fallo in altro modo
     // if(&dev_map == NULL){
     //     //device is not mounted
     //     return -ENODEV;
     // }
+    if(dev_status.bdev == NULL){
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
+        return -ENODEV;
+    }
 
-    printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld (the current file size is %lld)",MOD_NAME, len, *off, file_size);
+    __sync_fetch_and_add(&(dev_status.usage), 1); 
 
-    //this operation is not synchronized
-    //*off can be changed concurrently
-    //add synchronization if you need it for any reason
+
+    printk(KERN_INFO "%s: read operation called with len %ld - and offset %lld",MOD_NAME, len, *off);
+
     rcu_index = srcu_read_lock(&(dev_status.rcu));
 
+    mutex_lock(&seq_read_mutex);
 
     //check that *off is within boundaries
     if(*off < 0){
-        mutex_unlock(&f_mutex);
         __sync_fetch_and_sub(&(dev_status.usage), 1);
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return 0;
     } 
 
     if(*off >= file_size){ //EOF
+        mutex_unlock(&seq_read_mutex);
         printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
         *off = 0;
         __sync_fetch_and_sub(&(dev_status.usage), 1);
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
         return 0;
     }
+    
 
     //check if there is something in the device
-    //if(rcu_list_get_first_valid(&dev_map) == -1){
-    if(device_is_empty(&dev_map)){ 
+    if(device_is_empty(&dev_map)){
+        mutex_unlock(&seq_read_mutex); 
         printk(KERN_INFO "%s: Empty file", MOD_NAME);
         *off = 0;
         __sync_fetch_and_sub(&(dev_status.usage), 1);
@@ -78,17 +81,15 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         return 0;
     }
 
-    // if(len > file_size){
-    //     to_read = file_size + 1;
-    // }else{
-    //     to_read = len;
-    // }
+
     to_read = len;
     to_read--; //reserve a byte for the \0
     
 
     //check from whick block need
-    start_bindx = BLK_INDX(*off);
+    start_bindx = *off / (BLOCK_SSIZE - (sizeof(short) + sizeof(long)));
+    printk(KERN_INFO "%s: read operation must access block %lld of the device", MOD_NAME, start_bindx);
+
 
     //if(!list_is_valid(&dev_map, start_bindx)){
     if(!is_block_valid(&dev_map, start_bindx)){
@@ -96,6 +97,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         //start_bindx = list_first_valid(&dev_map);
         start_bindx = get_first_valid_block(&dev_map);
         if(start_bindx < 0){
+            mutex_unlock(&seq_read_mutex);
             printk(KERN_INFO "%s: Empty file", MOD_NAME);
             *off = 0;
             __sync_fetch_and_sub(&(dev_status.usage), 1);
@@ -106,7 +108,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
     //blks_to_read = BLK_INDX(*off + len) - start_bindx; //number of blocks to read
 
-    printk(KERN_INFO "%s: read operation in boundaries (len = %ld; file size = %lld)",MOD_NAME, len, file_size);
+    printk(KERN_INFO "%s: read operation request is valid (len = %ld): to_read %ld bytes starting from offset: %lld",MOD_NAME, len, to_read, start_bindx);
     
 
     block_to_read = start_bindx;
@@ -117,6 +119,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
         if(!bh){
+            mutex_unlock(&seq_read_mutex);
             __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return -EIO;
@@ -139,6 +142,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         tmp = kzalloc(sizeof(char)*(msg_len + 1), GFP_KERNEL); // +1 for '/n'
         if(!tmp){
+            mutex_unlock(&seq_read_mutex);
             printk("%s: kzalloc error, unable to allocate memory for read messages as single file\n", MOD_NAME);
             __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
@@ -153,7 +157,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         ret = copy_to_user(buf + read, tmp, msg_len + 1);
         if(ret != 0){
-            //an error occured during the copy, return
+            mutex_unlock(&seq_read_mutex);
             printk(KERN_INFO "%s: An error occured during the copy of the message from kernel space to user space", MOD_NAME);
             kfree(tmp);
             *off = 0;
@@ -168,7 +172,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         //block_to_read = list_next_valid(&dev_map, block_to_read - 2);
         block_to_read = get_next_valid_block(&dev_map, block_to_read - 2);
         printk(KERN_INFO "%s: next block to read: %ld", MOD_NAME, block_to_read);
-        printk(KERN_INFO "%s: to_read %lld", MOD_NAME, to_read);
+        printk(KERN_INFO "%s: to_read %ld", MOD_NAME, to_read);
 
         kfree(tmp);
 
@@ -184,7 +188,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
     srcu_read_unlock(&(dev_status.rcu), rcu_index);
     __sync_fetch_and_sub(&(dev_status.usage), 1);
-    
+    mutex_unlock(&seq_read_mutex);
     return read;
 
 }
@@ -214,7 +218,6 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
         }
 
 
-        //this work is done if the inode was not already cached
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
         inode_init_owner(sb->s_user_ns, the_inode, NULL, S_IFDIR);//set the root user as owned of the FS root
 #else
