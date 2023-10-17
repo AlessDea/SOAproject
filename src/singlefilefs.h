@@ -48,9 +48,10 @@ struct onefilefs_sb_info {
 	uint64_t block_size;
 	uint64_t first_key;
 	uint64_t last_key;
+	uint64_t f_size;
 
 	//padding to fit into a single block
-	char padding[ (4 * 1024) - (5 * sizeof(uint64_t))];
+	char padding[ (4 * 1024) - (6 * sizeof(uint64_t))];
 };
 
 // file.c

@@ -135,7 +135,7 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     sb_disk = (struct onefilefs_sb_info *)bh->b_data;
     sb_disk->first_key = dev_map.first;
     sb_disk->last_key = dev_map.last;
-    sb_disk->size = dev_map.size;
+    sb_disk->f_size = dev_map.size;
 
     printk(KERN_INFO "%s: last key was %ld and first key was %ld\n",MOD_NAME,sb_disk->last_key,sb_disk->first_key);
     

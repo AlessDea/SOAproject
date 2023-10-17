@@ -158,8 +158,11 @@ int update_file_size(int size){
         return -ENOMEM;
     }
 
+    printk(KERN_INFO "%s: key %ld\n",MOD_NAME, key);
 
     if (dev_map.last != -1){
+
+        printk(KERN_INFO "%s: it's the last %ld\n",MOD_NAME, dev_map.last);
 
         // update the previouse block's next field with this one
         bh = (struct buffer_head *)sb_bread(my_bdev_sb, dev_map.last + 2); // +2 for the superblock and inode blocks
@@ -354,6 +357,8 @@ int update_file_size(int size){
     
     printk("%s: thread %d requests a invalidate_data sys_call\n",MOD_NAME,current->pid);
 
+    printk("%s: block to invalidate %d\n",MOD_NAME,offset);
+
     // check if the block is already invalid
     // ret = list_is_valid(&dev_map, offset);
     // if(ret == 0){
@@ -381,9 +386,9 @@ int update_file_size(int size){
         mutex_unlock(&f_mutex);
         return 0; //already invalid
     }
-    
+    printk("%s: Invalidated %ld\n",MOD_NAME,ret);
 
-    // update the metadata of the invalitat block
+    // update the metadata of the invalidated block
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, offset + 2);
     if(!bh){
         __sync_fetch_and_sub(&(dev_status.usage), 1);

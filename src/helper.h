@@ -111,7 +111,7 @@ struct onefilefs_sb_info {
     uint64_t block_size;
     long first_key;
     long last_key;
-    long f_size;  //TODO: riportare in consistenza e aggiornare ad ogni scrittura
+    long f_size;
 
     //padding to fit into a single block
     char padding[(4 * 1024) - (3 * sizeof(uint64_t)) - (3 * sizeof(long))];

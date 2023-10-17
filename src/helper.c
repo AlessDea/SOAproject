@@ -128,35 +128,48 @@ long get_next_valid_block(map *m, long idx){
 
 
 long set_invalid_block(map *m, long idx){
-    struct buffer_head *bh, *bh_cur;
+	struct buffer_head *bh, *bh_cur;
 	struct block *blk, *cur_blk;
 	struct super_block *sb = my_bdev_sb;
 
  	long fk; //first key
-    fk = m->first;
+	fk = m->first;
 
 	if(fk < 0)
 		return fk;
 
 	// check if the block to delete is the first one
 	if(idx == m->first){
+		printk("%s: It's the first (m->first = %ld)\n",MOD_NAME,m->first);
 		// get the buffer_head
 		bh = (struct buffer_head *)sb_bread(sb, 2 + fk);
 		if(!bh){
 			return -EIO;
 		}
-
 		blk = (struct block*)bh->b_data;
 
-		m->first = (blk->next != -2) ? blk->next : -1; // update the new first block
+		// update the new first block
+		if(blk->next != -2){
+			m->first = blk->next;
+		}else{
+			m->first = -1;
+		}
+
+		blk->next = -2;
 
 		mark_buffer_dirty(bh);
 		
 		brelse(bh);
-        bh = NULL;
+		bh = NULL;
 		blk = NULL;
 
-		m->last = (idx == m->last) ? -1 : m->last; // update the map with the new last block if the removed one was the last
+		// update the map with the new last block if the removed one was the last
+		if(idx == m->last){
+			m->last = -1;
+		}
+
+		__sync_fetch_and_sub(&m->keys[idx], 1); // atomic block reservation for the write
+		__sync_fetch_and_sub(&m->num_of_valid_blocks, 1);
 
 		return 0;
 
@@ -183,9 +196,14 @@ long set_invalid_block(map *m, long idx){
             }
             cur_blk = (struct block*)bh_cur->b_data;
 
+			printk("%s: Found block to invalidate %ld\n",MOD_NAME,cur_blk);
+
             blk->next = cur_blk->next;
 
+			cur_blk->next = -2;
+
 			mark_buffer_dirty(bh);
+			mark_buffer_dirty(bh_cur);
 
             __sync_fetch_and_sub(&m->keys[idx], 1); // atomic block reservation for the write
 			__sync_fetch_and_sub(&m->num_of_valid_blocks, 1);
