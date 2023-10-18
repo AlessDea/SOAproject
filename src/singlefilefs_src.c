@@ -32,7 +32,6 @@ struct bdev_status dev_status __attribute__((aligned(64))) = {0, NULL};
 
 
 struct mutex f_mutex;
-struct mutex seq_read_mutex;
 
 static struct super_operations singlefilefs_super_ops = {
         //not required
@@ -173,7 +172,6 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
     dev_status.bdev = blkdev_get_by_path(dev_name, FMODE_READ|FMODE_WRITE, NULL);
     dev_status.usage = 0;
     mutex_init(&f_mutex);
-    mutex_init(&seq_read_mutex);
 
     srcu_ret = init_srcu_struct(&(dev_status.rcu));
     if (srcu_ret != 0) {

@@ -196,7 +196,7 @@ long set_invalid_block(map *m, long idx){
             }
             cur_blk = (struct block*)bh_cur->b_data;
 
-			printk("%s: Found block to invalidate %ld\n",MOD_NAME,cur_blk);
+			printk("%s: Found block to invalidate %ld\n",MOD_NAME,idx);
 
             blk->next = cur_blk->next;
 

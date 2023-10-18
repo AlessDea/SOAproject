@@ -127,7 +127,6 @@ struct bdev_status {
 
 extern struct mutex f_mutex; // for writers synchronization
 
-extern struct mutex seq_read_mutex; // for sequence read calls like cat
 
 
 // file.c

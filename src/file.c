@@ -18,7 +18,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
     struct buffer_head *bh = NULL;
     // struct inode * the_inode = filp->f_inode;
-    long file_size = dev_map.size;
     int ret;
     long block_to_read;//index of the block to be read from device
     struct block *msg;
@@ -31,6 +30,12 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     size_t to_read;
 
     int rcu_index;
+
+    /**
+     * TODO: devo fottermene di off, infatti quando viene invocata la read con off 0 (quasi sempre) e se 0 non è il primo blocco, allora so cazzi!
+     * 
+     * 
+    */
     
     read = 0;
 
@@ -55,8 +60,15 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         return 0;
     }
 
-    if(*off >= file_size){ //EOF
-        printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
+    // if(*off >= file_size){ //EOF
+    //     printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
+    //     *off = 0;
+    //     __sync_fetch_and_sub(&(dev_status.usage), 1);
+    //     srcu_read_unlock(&(dev_status.rcu), rcu_index);
+    //     return 0;
+    // }
+
+    if(*off != 0){
         *off = 0;
         __sync_fetch_and_sub(&(dev_status.usage), 1);
         srcu_read_unlock(&(dev_status.rcu), rcu_index);
@@ -77,11 +89,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     to_read = len;
     to_read--; //reserve a byte for the \0
     
-    // get seq_read_mutex only if len > file_size because read function will be called more than once (like cat)
-    if(len >= file_size){
-        printk(KERN_INFO "%s: Consequent read operations", MOD_NAME);
-        mutex_lock(&seq_read_mutex);
-    }
 
     //check from whick block need
     start_bindx = *off / (BLOCK_SSIZE - (sizeof(short) + sizeof(long)));
@@ -94,10 +101,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         //start_bindx = list_first_valid(&dev_map);
         start_bindx = get_first_valid_block(&dev_map);
         if(start_bindx < 0){
-            if(len >= file_size){
-                printk(KERN_INFO "%s: Consequent read operations", MOD_NAME);
-                mutex_unlock(&seq_read_mutex);
-            }
             printk(KERN_INFO "%s: Empty file", MOD_NAME);
             *off = 0;
             __sync_fetch_and_sub(&(dev_status.usage), 1);
@@ -119,10 +122,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         bh = (struct buffer_head *)sb_bread(filp->f_path.dentry->d_inode->i_sb, block_to_read);
         if(!bh){
-            if(len >= file_size){
-                printk(KERN_INFO "%s: Consequent read operations", MOD_NAME);
-                mutex_unlock(&seq_read_mutex);
-            }
             __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
             return -EIO;
@@ -145,10 +144,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         tmp = kzalloc(sizeof(char)*(msg_len + 1), GFP_KERNEL); // +1 for '/n'
         if(!tmp){
-            if(len >= file_size){
-                printk(KERN_INFO "%s: Consequent read operations", MOD_NAME);
-                mutex_unlock(&seq_read_mutex);
-            }
             printk("%s: kzalloc error, unable to allocate memory for read messages as single file\n", MOD_NAME);
             __sync_fetch_and_sub(&(dev_status.usage), 1);
             srcu_read_unlock(&(dev_status.rcu), rcu_index);
@@ -163,10 +158,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
         ret = copy_to_user(buf + read, tmp, msg_len + 1);
         if(ret != 0){
-            if(len >= file_size){
-                printk(KERN_INFO "%s: Consequent read operations", MOD_NAME);
-                mutex_unlock(&seq_read_mutex);
-            }
             printk(KERN_INFO "%s: An error occured during the copy of the message from kernel space to user space", MOD_NAME);
             kfree(tmp);
             *off = 0;
@@ -197,10 +188,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
     srcu_read_unlock(&(dev_status.rcu), rcu_index);
     __sync_fetch_and_sub(&(dev_status.usage), 1);
-    if(len >= file_size){
-        printk(KERN_INFO "%s: Consequent read operations", MOD_NAME);
-        mutex_unlock(&seq_read_mutex);
-    }
     return read;
 
 }
