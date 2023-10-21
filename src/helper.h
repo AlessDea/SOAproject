@@ -20,6 +20,10 @@
 #define NBLOCKS 10
 #endif
 
+#ifndef SYNCHRONOUS_W
+#define SYNCHRONOUS_W
+#endif
+
 #define MAX_NBLOCKS 100000
 
 #define BLOCK_SSIZE 4096 /* size in bytes of each block */

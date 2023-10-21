@@ -53,12 +53,12 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
 
 
     //check that *off is within boundaries
-    if(*off < 0){
-        *off = 0;
-        __sync_fetch_and_sub(&(dev_status.usage), 1);
-        srcu_read_unlock(&(dev_status.rcu), rcu_index);
-        return 0;
-    }
+    // if(*off < 0){
+    //     *off = 0;
+    //     __sync_fetch_and_sub(&(dev_status.usage), 1);
+    //     srcu_read_unlock(&(dev_status.rcu), rcu_index);
+    //     return 0;
+    // }
 
     // if(*off >= file_size){ //EOF
     //     printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
@@ -67,14 +67,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     //     srcu_read_unlock(&(dev_status.rcu), rcu_index);
     //     return 0;
     // }
-
-    if(*off != 0){
-        *off = 0;
-        __sync_fetch_and_sub(&(dev_status.usage), 1);
-        srcu_read_unlock(&(dev_status.rcu), rcu_index);
-        return 0;
-    }
-    
 
     //check if there is something in the device
     if(device_is_empty(&dev_map)){
@@ -85,29 +77,45 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         return 0;
     }
 
+    if(*off != 0){
+        *off = 0;
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
+        return 0;
+    }
+    
 
+    
     to_read = len;
     to_read--; //reserve a byte for the \0
     
 
     //check from whick block need
-    start_bindx = *off / (BLOCK_SSIZE - (sizeof(short) + sizeof(long)));
+    //start_bindx = *off / (BLOCK_SSIZE - (sizeof(short) + sizeof(long)));
+    start_bindx = get_first_valid_block(&dev_map);
+    if(start_bindx < 0){
+        printk(KERN_INFO "%s: Empty file", MOD_NAME);
+        *off = 0;
+        __sync_fetch_and_sub(&(dev_status.usage), 1);
+        srcu_read_unlock(&(dev_status.rcu), rcu_index);
+        return 0;
+    }
     printk(KERN_INFO "%s: read operation must access block %lld of the device", MOD_NAME, start_bindx);
 
 
     //if(!list_is_valid(&dev_map, start_bindx)){
-    if(!is_block_valid(&dev_map, start_bindx)){
-        //the starting block is not valid, start from the first valid
-        //start_bindx = list_first_valid(&dev_map);
-        start_bindx = get_first_valid_block(&dev_map);
-        if(start_bindx < 0){
-            printk(KERN_INFO "%s: Empty file", MOD_NAME);
-            *off = 0;
-            __sync_fetch_and_sub(&(dev_status.usage), 1);
-            srcu_read_unlock(&(dev_status.rcu), rcu_index);
-            return 0;
-        }
-    }
+    // if(!is_block_valid(&dev_map, start_bindx)){
+    //     //the starting block is not valid, start from the first valid
+    //     //start_bindx = list_first_valid(&dev_map);
+    //     start_bindx = get_first_valid_block(&dev_map);
+    //     if(start_bindx < 0){
+    //         printk(KERN_INFO "%s: Empty file", MOD_NAME);
+    //         *off = 0;
+    //         __sync_fetch_and_sub(&(dev_status.usage), 1);
+    //         srcu_read_unlock(&(dev_status.rcu), rcu_index);
+    //         return 0;
+    //     }
+    // }
 
     //blks_to_read = BLK_INDX(*off + len) - start_bindx; //number of blocks to read
 

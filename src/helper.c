@@ -158,6 +158,15 @@ long set_invalid_block(map *m, long idx){
 		blk->next = -2;
 
 		mark_buffer_dirty(bh);
+
+#ifdef SYNCHRONOUS_W
+        if(sync_dirty_buffer(bh) == 0) {
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MODN_AME);
+        }
+        else {
+            printk(KERN_INFO "%s: synchronous write not executed", MODN_AME);
+        }
+#endif
 		
 		brelse(bh);
 		bh = NULL;
@@ -204,6 +213,15 @@ long set_invalid_block(map *m, long idx){
 
 			mark_buffer_dirty(bh);
 			mark_buffer_dirty(bh_cur);
+
+#ifdef SYNCHRONOUS_W
+        if(sync_dirty_buffer(bh) == 0 && sync_dirty_buffer(bh_cur) == 0) {
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MODN_AME);
+        }
+        else {
+            printk(KERN_INFO "%s: synchronous write not executed", MODN_AME);
+        }
+#endif
 
             __sync_fetch_and_sub(&m->keys[idx], 1); // atomic block reservation for the write
 			__sync_fetch_and_sub(&m->num_of_valid_blocks, 1);
