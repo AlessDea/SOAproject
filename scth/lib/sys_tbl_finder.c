@@ -43,7 +43,7 @@
 #include "../include/vtpmo.h"
 #include "../include/scth.h"
 
-#define MOD_NAME "SINGLE FILE FS"
+#define MOD_NAME "USER_MSG"
 
 
 extern int sys_vtpmo(unsigned long vaddr);

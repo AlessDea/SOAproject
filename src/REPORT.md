@@ -71,11 +71,13 @@ These parameters can be configured changing the value inside the 'Makefile.env' 
 ### Load
 A usefull script is provided to facilitate the insertion of the module. This script can be invoked in the on the shell using sh:
 ```Shell
-$ sh ./load.sh
+$ sh load.sh
 ```
+> N.B. root privileges are required.
+
 This script:
 - compiles all the needed .c files
-- check if there is an old image of the device and in case asks the usere to use it or not
+- check if there is an old image of the device and in case asks the user to use it or not
 - mount the file system
 - insert the module
 

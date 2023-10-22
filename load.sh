@@ -13,7 +13,6 @@ cd ./src || exit
 make clean
 make all # 2>/dev/null
 
-# exit 0
 # check if the device already exists
 echo "${FILE}"
 if test -f $FILE; 

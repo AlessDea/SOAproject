@@ -9,13 +9,6 @@
 * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 * 
-* @file tasklet.c 
-* @brief This is the main source for the Linux Kernel Module which implements
-*       a system call that can be used to ask the SoftIRQ daemon to execute a tasklet 
-*
-* @author Francesco Quaglia
-*
-* @date November 13, 2021
 */
 
 #define EXPORT_SYMTAB
@@ -79,6 +72,16 @@ int update_file_size(int size){
 
     printk(KERN_INFO "%s: marking the buffer dirty\n",MOD_NAME);
     mark_buffer_dirty(bh);
+
+#ifdef SYNCHRONOUS_W
+        if(sync_dirty_buffer(bh) == 0) {
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MOD_NAME);
+        }
+        else {
+            printk(KERN_INFO "%s: synchronous write not executed", MOD_NAME);
+        }
+#endif
+
     brelse(bh);
 
     printk(KERN_INFO "%s: updated file size\n",MOD_NAME);
@@ -108,14 +111,7 @@ int update_file_size(int size){
 
     printk(KERN_INFO "%s: thread %d requests a put_data sys_call\n",MOD_NAME,current->pid);
 
-    /* the operation must be done all or nothing so if there is no enough space returns ENOMEM.
-     * Two things must be checked:
-     * - the user message fits in the block (size <= MSG_MAX_SIZE)
-     * - there is a free block
-     * */
-
-
-    
+  
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
@@ -127,7 +123,6 @@ int update_file_size(int size){
     __sync_fetch_and_add(&(dev_status.usage), 1); 
 
     /* check if size is less-equal of the block size */
-    // if((size + 1) > MSG_MAX_SIZE)  //+1 for the null terminator
     if((size) >= BLOCK_SSIZE - (sizeof(short) + sizeof(long))){  // = doesn't permit to store the '/0' at the end
         __sync_fetch_and_sub(&(dev_status.usage), 1);
         return -ENOMEM; 
@@ -139,16 +134,7 @@ int update_file_size(int size){
     }
 
 
-    /* check if there is a free block available and if there is then 'book' it. */
-    // off = list_first_free(&dev_map);
-    // if(off < 0){
-    //     printk(KERN_INFO "%s: thread %d request for put_data sys_call: no free blocks available", MOD_NAME, current->pid);
-    //     return -ENOMEM;
-    // }
-
-    printk(KERN_INFO "%s: getting mutex\n",MOD_NAME);
     mutex_lock(&f_mutex);
-    printk(KERN_INFO "%s: got mutex\n",MOD_NAME);
 
     key = get_next_free_block(&dev_map);
     if(key < 0){
@@ -158,7 +144,6 @@ int update_file_size(int size){
         return -ENOMEM;
     }
 
-    printk(KERN_INFO "%s: key %ld\n",MOD_NAME, key);
 
     if (dev_map.last != -1){
 
@@ -175,13 +160,19 @@ int update_file_size(int size){
         blk = (struct block*)bh->b_data;
         blk->next = key;
 
-        //printk(KERN_INFO "%s: prev's (%ld) next %ld\n",MOD_NAME,ret.prev,blk->next);
 
         mark_buffer_dirty(bh);
+
+#ifdef SYNCHRONOUS_W
+        if(sync_dirty_buffer(bh) == 0) {
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MOD_NAME);
+        }
+        else {
+            printk(KERN_INFO "%s: synchronous write not executed", MOD_NAME);
+        }
+#endif
+
         brelse(bh);
-
-        //blk = NULL;
-
     }
 
     // update last key and first key in the device map
@@ -214,10 +205,7 @@ int update_file_size(int size){
     blk1->next = -1; // the next of the last inserted block is always null
     memcpy(blk1->data, addr, size+1);
 
-    printk(KERN_INFO "%s: synchronizing srcu\n",MOD_NAME);
     synchronize_srcu(&(dev_status.rcu));
-    printk(KERN_INFO "%s: synchronized srcu\n",MOD_NAME);
-
 
     // get the buffer_head
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, key + 2); // +2 for the superblock and inode blocks
@@ -228,25 +216,27 @@ int update_file_size(int size){
     }
 
     memcpy(bh->b_data, (char *)blk1, sizeof(struct block));
-    printk(KERN_INFO "%s: copied in bh\n",MOD_NAME);
     mark_buffer_dirty(bh);
+
+#ifdef SYNCHRONOUS_W
+        if(sync_dirty_buffer(bh) == 0) {
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MOD_NAME);
+        }
+        else {
+            printk(KERN_INFO "%s: synchronous write not executed", MOD_NAME);
+        }
+#endif
+
     brelse(bh);
-    printk(KERN_INFO "%s: written the block\n",MOD_NAME);
     
     //+1 for the null terminator which become a \n in the read operation
-    //when a read is performed, with cat for example, the buffer has len as the file, so we need
-    //space for the \n for each message
-    //update_file_size(size);
     dev_map.size += size;
     printk(KERN_INFO "%s: thread %d request for put_data sys_call success\n",MOD_NAME,current->pid);
 
-    // kfree(blk);
-    // kfree(blk1);
+    kfree(blk1);
     kfree(addr);
     __sync_fetch_and_sub(&(dev_status.usage), 1);
-    printk(KERN_INFO "%s: releasing mutex\n",MOD_NAME);
     mutex_unlock(&f_mutex);
-    printk(KERN_INFO "%s: released mutex\n",MOD_NAME);
     return key;
 }
 
@@ -265,16 +255,7 @@ int update_file_size(int size){
     short to_cpy;
     int rcu_index;
 
-
-    //printk(KERN_INFO "%s: thread %d requests a get_data sys_call\n",MOD_NAME,current->pid);
-
-    /* check if offset exists */
-    //if(BLK_INDX(offset) > NBLOCKS-1)
-    //    return -ENODATA;
-
-    //off = BLK_INDX(offset);
-
-     
+  
 
     // check if device is mounted
     if(dev_status.bdev == NULL){
@@ -313,7 +294,6 @@ int update_file_size(int size){
     else
         to_cpy = size;
 
-    //addr = (void*)get_zeroed_page(GFP_KERNEL);
 
     addr = kzalloc(sizeof(char)*(BLOCK_SSIZE - (sizeof(short) + sizeof(long))), GFP_KERNEL);
 
@@ -359,13 +339,7 @@ int update_file_size(int size){
 
     printk("%s: block to invalidate %d\n",MOD_NAME,offset);
 
-    // check if the block is already invalid
-    // ret = list_is_valid(&dev_map, offset);
-    // if(ret == 0){
-    //     printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call error: block is already invalid\n",MOD_NAME,current->pid);
-    //     return 0; //already invalid
-    // } controllare se è valido non serve, lo fa già remove il controllo
-
+   
     mutex_lock(&f_mutex);
 
     // check if the block is valid
@@ -400,10 +374,19 @@ int update_file_size(int size){
     blk->metadata = INVALIDATE(blk->metadata);
     blk->next = -2;
 
-    //update_file_size(-(MSG_LEN(blk->metadata) + 1)); // +1 is for the \n that is logically used for the division of the messages
     dev_map.size -= (MSG_LEN(blk->metadata) + 1); 
 
     mark_buffer_dirty(bh);
+
+#ifdef SYNCHRONOUS_W
+        if(sync_dirty_buffer(bh) == 0) {
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MOD_NAME);
+        }
+        else {
+            printk(KERN_INFO "%s: synchronous write not executed", MOD_NAME);
+        }
+#endif
+
     brelse(bh);
 
     printk(KERN_INFO "%s: thread %d request for invalidate_data sys_call on block %d success\n",MOD_NAME,current->pid, offset);

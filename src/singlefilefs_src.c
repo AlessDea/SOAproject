@@ -14,14 +14,12 @@
 #include "../scth/include/scth.h"
 #include "helper.h"
 
-//#include "singlefilefs.h"
-
 
 unsigned long the_syscall_table = 0x0;
 
 unsigned long the_ni_syscall;
 
-unsigned long new_sys_call_array[] = {0x0, 0x0, 0x0};//please set to sys_put_work at startup
+unsigned long new_sys_call_array[] = {0x0, 0x0, 0x0};
 #define HACKED_ENTRIES (int)(sizeof(new_sys_call_array)/sizeof(unsigned long))
 int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
 
@@ -29,9 +27,8 @@ int restore[HACKED_ENTRIES] = {[0 ... (HACKED_ENTRIES-1)] -1};
 map dev_map;/* map of the device */
 struct super_block *my_bdev_sb; // superblock ref to be used in the systemcalls
 struct bdev_status dev_status __attribute__((aligned(64))) = {0, NULL};
-
-
 struct mutex f_mutex;
+
 
 static struct super_operations singlefilefs_super_ops = {
         //not required
@@ -120,7 +117,6 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
     struct buffer_head *bh;
     struct onefilefs_sb_info *sb_disk;
 
-    //list_free(&dev_map);
 
     if(dev_status.usage > 0){
         printk(KERN_INFO "%s: Unmount process stopped. Device is still in use! \n",MOD_NAME);
@@ -149,7 +145,6 @@ static void singlefilefs_kill_superblock(struct super_block *s) {
 }
 
 
-//called on file system mounting 
 struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, const char *dev_name, void *data) {
 
     struct dentry *ret;
@@ -179,9 +174,7 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
         return ERR_PTR(-ENOMEM);
     }
 
-    /* check if in the device there are valid blocks, in case retrieve them and create the map */
-    // read the sb (block 0) then retrieve the last_key field
-    // get the buffer_head
+    
     bh = (struct buffer_head *)sb_bread(my_bdev_sb, 0);
     if(!bh){
         return NULL;
@@ -189,28 +182,25 @@ struct dentry *singlefilefs_mount(struct file_system_type *fs_type, int flags, c
 
     sb = (struct onefilefs_sb_info*)bh->b_data;
 
-    //dev_map.first = sb->first_key;
 
     last_k = sb->last_key;
     first_k = sb->first_key;
-    // mark_buffer_dirty(bh);
-    // brelse(bh);
+   
 
     if(last_k > -1){
         dev_map.last = last_k;
         dev_map.first = first_k;
         dev_map.size = sb->f_size;
         printk(KERN_INFO "%s: the device was found written: starting up with the old data (last key %ld, first key %ld)\n", MOD_NAME, dev_map.last, dev_map.first);
-        //list_reload(&dev_map, my_bdev_sb);
         reload_device_map(&dev_map);
     }else{
-        dev_map.last = -1; //-1 indicates that the device is virgin
+        dev_map.last = -1; //-1 indicates that the device is empty
         dev_map.first = -1;
         dev_map.size = 0;
-        printk(KERN_INFO "%s: the device was found virgin: starting up with empty device\n", MOD_NAME);
+        printk(KERN_INFO "%s: the device was found empty: starting up with empty device\n", MOD_NAME);
     }
 
-    brelse(bh); //NEW
+    brelse(bh);
 
     return ret;
 }
@@ -234,7 +224,6 @@ static int singlefilefs_init(void) {
     printk(KERN_INFO
     "%s: initializing\n", MOD_NAME);
 
-	//if(!try_module_get(THIS_MODULE)) return -1;
 
     /* looking for syscall table */
     syscall_table_finder();
@@ -292,8 +281,6 @@ static int singlefilefs_init(void) {
 static void singlefilefs_exit(void) {
 
     int ret, i;
-
-    // list_free(&dev_map);
 
     unprotect_memory();
     for(i=0;i<HACKED_ENTRIES;i++){

@@ -5,7 +5,7 @@
 #include <linux/fs.h>
 
 
-#define MOD_NAME "SINGLE FILE FS"
+#define MOD_NAME "USER_MSG"
 
 #define MAGIC 0x42424242
 #define DEFAULT_BLOCK_SIZE 4096
@@ -43,15 +43,15 @@ struct onefilefs_dir_record {
 
 //superblock definition
 struct onefilefs_sb_info {
-	uint64_t version;
-	uint64_t magic;
-	uint64_t block_size;
-	uint64_t first_key;
-	uint64_t last_key;
-	uint64_t f_size;
+    uint64_t version;
+    uint64_t magic;
+    uint64_t block_size;
+    long first_key;
+    long last_key;
+    long f_size;
 
-	//padding to fit into a single block
-	char padding[ (4 * 1024) - (6 * sizeof(uint64_t))];
+    //padding to fit into a single block
+    char padding[(4 * 1024) - (3 * sizeof(uint64_t)) - (3 * sizeof(long))];
 };
 
 // file.c

@@ -11,7 +11,8 @@
         "types.h": "c",
         "array": "c",
         "string": "c",
-        "helper.h": "c"
+        "helper.h": "c",
+        "typeinfo": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

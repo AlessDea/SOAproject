@@ -15,6 +15,7 @@
 
 
 /* User Messages Driver */
+#define MAX_NBLOCKS 1000
 
 #ifndef NBLOCKS
 #define NBLOCKS 10
@@ -24,13 +25,13 @@
 #define SYNCHRONOUS_W
 #endif
 
-#define MAX_NBLOCKS 100000
+
 
 #define BLOCK_SSIZE 4096 /* size in bytes of each block */
 
 #define DEVICE_SIZE (NBLOCKS * BLOCK_SSIZE)
-#define BLK_INDX(off) (off/MSG_MAX_SIZE) /* from an offset return the index of the block. Needed if the offset is expressed not as multiple of block size */
-#define IN_BLOCK_OFF(off) off%MSG_MAX_SIZE /* starting off inside the message */
+#define BLK_INDX(off) (off/MSG_MAX_SIZE) 
+#define IN_BLOCK_OFF(off) off%MSG_MAX_SIZE
 
 #define GET_BLK_DATA(b) (b + METADATA_SIZE)
 
@@ -72,7 +73,7 @@ extern map dev_map; /* map of the device */
 
 /* ------------------------------------------------------------- */
 
-#define MOD_NAME "SINGLE FILE FS"
+#define MOD_NAME "USER_MSG"
 
 #define MAGIC 0x42424242
 #define DEFAULT_BLOCK_SIZE 4096

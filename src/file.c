@@ -52,21 +52,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     rcu_index = srcu_read_lock(&(dev_status.rcu));
 
 
-    //check that *off is within boundaries
-    // if(*off < 0){
-    //     *off = 0;
-    //     __sync_fetch_and_sub(&(dev_status.usage), 1);
-    //     srcu_read_unlock(&(dev_status.rcu), rcu_index);
-    //     return 0;
-    // }
-
-    // if(*off >= file_size){ //EOF
-    //     printk(KERN_INFO "%s: Offset out of boundaries, starting from offset 0", MOD_NAME);
-    //     *off = 0;
-    //     __sync_fetch_and_sub(&(dev_status.usage), 1);
-    //     srcu_read_unlock(&(dev_status.rcu), rcu_index);
-    //     return 0;
-    // }
 
     //check if there is something in the device
     if(device_is_empty(&dev_map)){
@@ -91,7 +76,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     
 
     //check from whick block need
-    //start_bindx = *off / (BLOCK_SSIZE - (sizeof(short) + sizeof(long)));
+
     start_bindx = get_first_valid_block(&dev_map);
     if(start_bindx < 0){
         printk(KERN_INFO "%s: Empty file", MOD_NAME);
@@ -102,22 +87,6 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
     }
     printk(KERN_INFO "%s: read operation must access block %lld of the device", MOD_NAME, start_bindx);
 
-
-    //if(!list_is_valid(&dev_map, start_bindx)){
-    // if(!is_block_valid(&dev_map, start_bindx)){
-    //     //the starting block is not valid, start from the first valid
-    //     //start_bindx = list_first_valid(&dev_map);
-    //     start_bindx = get_first_valid_block(&dev_map);
-    //     if(start_bindx < 0){
-    //         printk(KERN_INFO "%s: Empty file", MOD_NAME);
-    //         *off = 0;
-    //         __sync_fetch_and_sub(&(dev_status.usage), 1);
-    //         srcu_read_unlock(&(dev_status.rcu), rcu_index);
-    //         return 0;
-    //     }
-    // }
-
-    //blks_to_read = BLK_INDX(*off + len) - start_bindx; //number of blocks to read
 
     printk(KERN_INFO "%s: read operation request is valid (len = %ld): to_read %ld bytes starting from offset: %lld",MOD_NAME, len, to_read, start_bindx);
     
@@ -141,12 +110,7 @@ ssize_t onefilefs_read(struct file *filp, char __user *buf, size_t len, loff_t *
         printk(KERN_INFO "%s: read operation of message: %s.", MOD_NAME, msg->data);
 
 
-        //there is no check if msg_len is in boundary with len
-        //es. 
-        // b1 len = 10, msg_len = 4 
-        // b2 len = 6, msg_len = 3  
-        // b3 len = 3, msg_len = 2 
-        //read end: len = 1 
+
         if(msg_len >= to_read)
             msg_len = to_read - 1;
 
@@ -238,7 +202,7 @@ struct dentry *onefilefs_lookup(struct inode *parent_inode, struct dentry *child
         set_nlink(the_inode,1);
 
         //now we retrieve the file size via the FS specific inode, putting it into the generic inode
-        bh = (struct buffer_head *)sb_bread(sb, SINGLEFILEFS_INODES_BLOCK_NUMBER );
+        bh = (struct buffer_head *)sb_bread(sb, SINGLEFILEFS_INODES_BLOCK_NUMBER);
         if(!bh){
             iput(the_inode);
             return ERR_PTR(-EIO);

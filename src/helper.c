@@ -76,15 +76,6 @@ long is_block_valid(map *m, long idx){
 }
 
 
-// long get_first_valid_block(map *m){
-// 	long i;
-// 	for(i = 0; i < NBLOCKS; i++){
-// 		if(m->keys[i] == 1)
-// 			return i;
-// 	}
-// 	return -1;
-// }
-
 
 long get_first_valid_block(map *m){
 	return m->first;
@@ -161,10 +152,10 @@ long set_invalid_block(map *m, long idx){
 
 #ifdef SYNCHRONOUS_W
         if(sync_dirty_buffer(bh) == 0) {
-            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MODN_AME);
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MOD_NAME);
         }
         else {
-            printk(KERN_INFO "%s: synchronous write not executed", MODN_AME);
+            printk(KERN_INFO "%s: synchronous write not executed", MOD_NAME);
         }
 #endif
 		
@@ -216,10 +207,10 @@ long set_invalid_block(map *m, long idx){
 
 #ifdef SYNCHRONOUS_W
         if(sync_dirty_buffer(bh) == 0 && sync_dirty_buffer(bh_cur) == 0) {
-            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MODN_AME);
+            AUDIT printk(KERN_INFO "%s: synchronous write executed successfully", MOD_NAME);
         }
         else {
-            printk(KERN_INFO "%s: synchronous write not executed", MODN_AME);
+            printk(KERN_INFO "%s: synchronous write not executed", MOD_NAME);
         }
 #endif
 
